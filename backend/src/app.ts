@@ -3,6 +3,7 @@ import express, { type Express } from "express";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFound";
+import { authRouter } from "./modules/auth/auth.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -13,6 +14,8 @@ export function createApp(): Express {
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
+
+  app.use("/api/auth", authRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
