@@ -25,6 +25,7 @@ export function useLoginMutation() {
   return useMutation({
     mutationFn: (payload: LoginPayload) => login(payload),
     onSuccess: (data) => {
+      queryClient.removeQueries({ queryKey: ["treatments", "admin"] });
       setToken(data.token);
       queryClient.setQueryData<MeResponse>(ME_QUERY_KEY, {
         user: data.user,
@@ -55,6 +56,7 @@ export function useLogout() {
 
   return () => {
     clearToken();
+    queryClient.removeQueries({ queryKey: ["treatments", "admin"] });
     queryClient.removeQueries({ queryKey: ME_QUERY_KEY });
   };
 }

@@ -1,0 +1,43 @@
+import { Schema, model, models, Types, type Document, type Model } from "mongoose";
+
+export const TREATMENT_CATEGORIES = [
+  "Preventive",
+  "Restorative",
+  "Cosmetic",
+  "Orthodontic",
+  "Surgical",
+  "Pediatric",
+] as const;
+
+export type TreatmentCategory = (typeof TREATMENT_CATEGORIES)[number];
+
+export interface TreatmentDocument extends Document {
+  clinicId: Types.ObjectId;
+  imageUrl: string;
+  title: string;
+  shortDescription: string;
+  fullDescription: string;
+  price: number;
+  durationMinutes: number;
+  category: TreatmentCategory;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const treatmentSchema = new Schema<TreatmentDocument>(
+  {
+    clinicId: { type: Schema.Types.ObjectId, ref: "Clinic", required: true, index: true },
+    imageUrl: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    shortDescription: { type: String, required: true, trim: true },
+    fullDescription: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    durationMinutes: { type: Number, required: true, min: 1 },
+    category: { type: String, enum: TREATMENT_CATEGORIES, required: true },
+  },
+  { timestamps: true },
+);
+
+export const Treatment =
+  (models.Treatment as Model<TreatmentDocument>) ||
+  model<TreatmentDocument>("Treatment", treatmentSchema);

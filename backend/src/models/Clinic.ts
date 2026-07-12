@@ -2,6 +2,7 @@ import { Schema, model, models, type Document, type Model } from "mongoose";
 
 export interface ClinicDocument extends Document {
   name: string;
+  slug?: string;
   address?: string;
   phone?: string;
   email?: string;
@@ -12,6 +13,10 @@ export interface ClinicDocument extends Document {
 const clinicSchema = new Schema<ClinicDocument>(
   {
     name: { type: String, required: true, trim: true },
+    // sparse (not required at the schema level) so clinics created before this
+    // field existed don't collide on the unique index - the app layer always
+    // generates one for new clinics going forward.
+    slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true },
     address: { type: String, trim: true },
     phone: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },

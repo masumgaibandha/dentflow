@@ -12,6 +12,7 @@ export interface AuthUser {
 export interface AuthClinic {
   id: string;
   name: string;
+  slug?: string;
 }
 
 export interface AuthResponse {
