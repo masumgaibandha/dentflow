@@ -3,6 +3,7 @@ import express, { type Express } from "express";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFound";
+import { appointmentRouter } from "./modules/appointments/appointment.routes";
 import { authRouter } from "./modules/auth/auth.routes";
 import { dentistRouter } from "./modules/dentists/dentist.routes";
 import { patientRouter } from "./modules/patients/patient.routes";
@@ -22,6 +23,7 @@ export function createApp(): Express {
   app.use("/api/treatments", treatmentRouter);
   app.use("/api/patients", patientRouter);
   app.use("/api/dentists", dentistRouter);
+  app.use("/api/appointments", appointmentRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

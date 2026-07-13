@@ -47,6 +47,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link href="/dentists" className="hover:underline">
               Dentists
             </Link>
+            <Link href="/appointments" className="hover:underline">
+              Appointments
+            </Link>
             <Link href="/items/manage" className="hover:underline">
               Services
             </Link>
