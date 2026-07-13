@@ -5,6 +5,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFound";
 import { appointmentRouter } from "./modules/appointments/appointment.routes";
 import { authRouter } from "./modules/auth/auth.routes";
+import { clinicRouter } from "./modules/clinics/clinic.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { dentistRouter } from "./modules/dentists/dentist.routes";
 import { invoiceRouter } from "./modules/invoices/invoice.routes";
@@ -28,6 +29,7 @@ export function createApp(): Express {
   app.use("/api/appointments", appointmentRouter);
   app.use("/api/invoices", invoiceRouter);
   app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/clinics", clinicRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

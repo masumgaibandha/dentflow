@@ -1,8 +1,36 @@
 // Timezone rule for all dashboard date-boundary calculations: use the
-// clinic's own IANA timezone when it has one set. Clinics have no settings
-// UI yet to set this, so in practice every clinic currently falls back to
-// this documented default - never a specific clinic's timezone.
+// clinic's own IANA timezone when it has one set (see /api/clinics/me),
+// otherwise fall back to this documented default - never a hardcoded
+// specific clinic's timezone.
 export const DEFAULT_TIMEZONE = "UTC";
+
+/**
+ * Validates an IANA timezone name in a runtime-compatible way. Prefers the
+ * exact `Intl.supportedValuesOf("timeZone")` allowlist when the runtime
+ * supports it (Node 18+), falling back to the `Intl.DateTimeFormat`
+ * try/catch technique (which throws RangeError for an unrecognized zone)
+ * everywhere else.
+ */
+export function isValidTimezone(timezone: string): boolean {
+  const supportedValuesOf = (
+    Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+  ).supportedValuesOf;
+
+  if (typeof supportedValuesOf === "function") {
+    try {
+      return supportedValuesOf("timeZone").includes(timezone);
+    } catch {
+      // Fall through to the try/catch check below.
+    }
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Returns the UTC instants corresponding to local midnight at the start and

@@ -56,6 +56,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link href="/items/manage" className="hover:underline">
               Services
             </Link>
+            <Link href="/settings" className="hover:underline">
+              Settings
+            </Link>
           </nav>
         </div>
         <button
