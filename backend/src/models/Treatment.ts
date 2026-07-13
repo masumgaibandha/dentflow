@@ -20,6 +20,10 @@ export interface TreatmentDocument extends Document {
   price: number;
   durationMinutes: number;
   category: TreatmentCategory;
+  // Defaults true so every existing treatment stays visible/bookable with no
+  // migration step; only relevant consumer today is the patient portal's
+  // booking lookup, which filters to isActive: true.
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +38,7 @@ const treatmentSchema = new Schema<TreatmentDocument>(
     price: { type: Number, required: true, min: 0 },
     durationMinutes: { type: Number, required: true, min: 1 },
     category: { type: String, enum: TREATMENT_CATEGORIES, required: true },
+    isActive: { type: Boolean, default: true, required: true },
   },
   { timestamps: true },
 );

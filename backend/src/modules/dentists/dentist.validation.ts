@@ -5,6 +5,9 @@ export const dentistInputSchema = z.object({
   email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
   phone: z.string().trim().min(1, "Phone is required").optional().or(z.literal("")),
   specialty: z.string().trim().optional().or(z.literal("")),
+  // Not surfaced in the admin UI yet - controls whether the patient portal's
+  // booking lookup (GET /api/portal/dentists) includes this dentist.
+  isActive: z.boolean().optional(),
 });
 
 export type DentistInput = z.infer<typeof dentistInputSchema>;

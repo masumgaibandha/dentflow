@@ -50,6 +50,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             <Link href="/portal" className="hover:underline">
               Dashboard
             </Link>
+            <Link href="/portal/appointments" className="hover:underline">
+              Appointments
+            </Link>
             <Link href="/portal/invoices" className="hover:underline">
               Invoices
             </Link>

@@ -65,6 +65,68 @@ export function getPortalAppointments(
   });
 }
 
+export interface PortalDentist {
+  id: string;
+  name: string;
+  specialty: string | null;
+}
+
+export interface ListPortalDentistsResponse {
+  data: PortalDentist[];
+  pagination: Pagination;
+}
+
+export function getPortalDentists(token: string): Promise<ListPortalDentistsResponse> {
+  return apiFetch<ListPortalDentistsResponse>("/api/portal/dentists?limit=100", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface PortalTreatment {
+  id: string;
+  title: string;
+  durationMinutes: number;
+  priceCents: number;
+}
+
+export interface ListPortalTreatmentsResponse {
+  data: PortalTreatment[];
+  pagination: Pagination;
+}
+
+export function getPortalTreatments(token: string): Promise<ListPortalTreatmentsResponse> {
+  return apiFetch<ListPortalTreatmentsResponse>("/api/portal/treatments?limit=100", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface CreatePortalAppointmentInput {
+  dentistId: string;
+  treatmentId: string;
+  // Unambiguous ISO instant (e.g. via `new Date(...).toISOString()`) - never
+  // a bare local-time string, matching the existing admin appointment module.
+  startTime: string;
+}
+
+export function createPortalAppointment(
+  input: CreatePortalAppointmentInput,
+  idempotencyKey: string,
+  token: string,
+): Promise<PortalAppointment> {
+  return apiFetch<PortalAppointment>("/api/portal/appointments", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(input),
+  });
+}
+
+export function cancelPortalAppointment(id: string, token: string): Promise<PortalAppointment> {
+  return apiFetch<PortalAppointment>(`/api/portal/appointments/${id}/cancel`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export type PortalInvoiceStatus = "unpaid" | "paid" | "void";
 export type PortalPaymentMethod = "cash" | "card" | "bank_transfer" | "mobile_banking";
 

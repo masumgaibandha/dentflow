@@ -2,12 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  cancelPortalAppointment,
+  createPortalAppointment,
   createPortalInvoicePaymentIntent,
   getPortalAppointments,
+  getPortalDentists,
   getPortalInvoice,
   getPortalInvoices,
   getPortalMe,
+  getPortalTreatments,
   verifyPortalInvoicePayment,
+  type CreatePortalAppointmentInput,
   type ListPortalAppointmentsParams,
   type ListPortalInvoicesParams,
 } from "@/lib/api/portalApi";
@@ -40,6 +45,50 @@ export function usePortalAppointments(params: ListPortalAppointmentsParams) {
     queryFn: () => getPortalAppointments(params, requireToken()),
     enabled: Boolean(getToken()),
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function usePortalDentists() {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "dentists"],
+    queryFn: () => getPortalDentists(requireToken()),
+    enabled: Boolean(getToken()),
+  });
+}
+
+export function usePortalTreatments() {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "treatments"],
+    queryFn: () => getPortalTreatments(requireToken()),
+    enabled: Boolean(getToken()),
+  });
+}
+
+export function useCreatePortalAppointment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      input,
+      idempotencyKey,
+    }: {
+      input: CreatePortalAppointmentInput;
+      idempotencyKey: string;
+    }) => createPortalAppointment(input, idempotencyKey, requireToken()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "appointments"] });
+    },
+  });
+}
+
+export function useCancelPortalAppointment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => cancelPortalAppointment(id, requireToken()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "appointments"] });
+    },
   });
 }
 

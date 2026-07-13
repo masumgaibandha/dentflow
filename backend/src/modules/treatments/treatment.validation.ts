@@ -9,6 +9,9 @@ export const treatmentInputSchema = z.object({
   price: z.coerce.number().min(0, "Price must be 0 or greater"),
   durationMinutes: z.coerce.number().int().min(1, "Duration must be at least 1 minute"),
   category: z.enum(TREATMENT_CATEGORIES),
+  // Not surfaced in the admin UI yet - controls whether the patient portal's
+  // booking lookup (GET /api/portal/treatments) includes this treatment.
+  isActive: z.boolean().optional(),
 });
 
 export type TreatmentInput = z.infer<typeof treatmentInputSchema>;

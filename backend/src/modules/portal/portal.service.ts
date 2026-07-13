@@ -1,17 +1,26 @@
 import { randomUUID } from "node:crypto";
 import mongoose, { type FilterQuery } from "mongoose";
+import { assertNoAppointmentOverlap } from "../appointments/appointment.service";
 import { Appointment, type AppointmentDocument } from "../../models/Appointment";
 import { Clinic } from "../../models/Clinic";
 import { getStripeClient, STRIPE_CURRENCY } from "../../config/stripe";
+import { Dentist, type DentistDocument } from "../../models/Dentist";
 import { Invoice, type InvoiceDocument } from "../../models/Invoice";
 import { Patient } from "../../models/Patient";
 import {
   PaymentTransaction,
   type PaymentTransactionStatus,
 } from "../../models/PaymentTransaction";
+import { Treatment, type TreatmentDocument } from "../../models/Treatment";
 import { User } from "../../models/User";
 import { ApiError } from "../../utils/ApiError";
-import type { ListPortalInvoicesQuery, PortalAppointmentsQuery } from "./portal.validation";
+import type {
+  CreatePortalAppointmentInput,
+  ListPortalInvoicesQuery,
+  PortalAppointmentsQuery,
+  PortalDentistsQuery,
+  PortalTreatmentsQuery,
+} from "./portal.validation";
 
 const DENTIST_POPULATE = { path: "dentistId", select: "name clinicId" };
 const TREATMENT_POPULATE = { path: "treatmentId", select: "title clinicId" };
@@ -121,6 +130,235 @@ export async function getPortalAppointments(
       totalPages: Math.max(1, Math.ceil(total / query.limit)),
     },
   };
+}
+
+async function getPortalAppointmentDto(id: string, clinicId: string) {
+  const appointment = await Appointment.findById(id)
+    .populate(DENTIST_POPULATE)
+    .populate(TREATMENT_POPULATE);
+  if (!appointment) {
+    throw new ApiError(404, "Appointment not found", "NOT_FOUND");
+  }
+  return toPortalAppointmentDto(appointment, clinicId);
+}
+
+function toPortalDentistDto(dentist: DentistDocument) {
+  return {
+    id: dentist._id.toString(),
+    name: dentist.name,
+    specialty: dentist.specialty ?? null,
+  };
+}
+
+export async function listPortalDentists(clinicId: string, query: PortalDentistsQuery) {
+  // Active-only, clinic-scoped - the only two conditions that decide whether
+  // a dentist is bookable from the portal. "Active" is backward-compatible:
+  // isActive is only true/false for records written after this field
+  // existed - a query filter like {isActive: true} never matches documents
+  // where the field is simply absent (Mongo's query engine evaluates the
+  // stored BSON directly, it does not apply Mongoose's schema default), so
+  // legacy dentists/treatments created before this milestone would silently
+  // vanish from the portal without this $or.
+  const filter: FilterQuery<DentistDocument> = {
+    clinicId,
+    $or: [{ isActive: true }, { isActive: { $exists: false } }],
+  };
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    Dentist.find(filter).sort({ name: 1 }).skip(skip).limit(query.limit),
+    Dentist.countDocuments(filter),
+  ]);
+
+  return {
+    data: items.map(toPortalDentistDto),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    },
+  };
+}
+
+function toPortalTreatmentDto(treatment: TreatmentDocument) {
+  return {
+    id: treatment._id.toString(),
+    title: treatment.title,
+    durationMinutes: treatment.durationMinutes,
+    // Treatment.price is stored in major units (dollars, see TreatmentForm) -
+    // converted to integer cents here to match the cents convention every
+    // other patient-facing amount in the portal already uses.
+    priceCents: Math.round(treatment.price * 100),
+  };
+}
+
+export async function listPortalTreatments(clinicId: string, query: PortalTreatmentsQuery) {
+  // Same backward-compatible active rule as listPortalDentists above.
+  const filter: FilterQuery<TreatmentDocument> = {
+    clinicId,
+    $or: [{ isActive: true }, { isActive: { $exists: false } }],
+  };
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    Treatment.find(filter).sort({ title: 1 }).skip(skip).limit(query.limit),
+    Treatment.countDocuments(filter),
+  ]);
+
+  return {
+    data: items.map(toPortalTreatmentDto),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    },
+  };
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === 11000
+  );
+}
+
+export async function createPortalAppointment(
+  clinicId: string,
+  patientId: string,
+  input: CreatePortalAppointmentInput,
+  idempotencyKey: string,
+) {
+  // Idempotent replay: an earlier identical submission (double-click, a
+  // retried request after a flaky network response) already created this
+  // booking - return it as-is instead of re-validating or creating a second one.
+  const existing = await Appointment.findOne({ clinicId, patientId, idempotencyKey });
+  if (existing) {
+    return getPortalAppointmentDto(existing._id.toString(), clinicId);
+  }
+
+  const dentist = await Dentist.findById(input.dentistId);
+  if (!dentist || dentist.clinicId.toString() !== clinicId) {
+    throw new ApiError(404, "Dentist not found", "NOT_FOUND");
+  }
+  if (!dentist.isActive) {
+    throw new ApiError(
+      400,
+      "This dentist is not currently accepting bookings",
+      "DENTIST_INACTIVE",
+    );
+  }
+
+  const treatment = await Treatment.findById(input.treatmentId);
+  if (!treatment || treatment.clinicId.toString() !== clinicId) {
+    throw new ApiError(404, "Treatment not found", "NOT_FOUND");
+  }
+  if (!treatment.isActive) {
+    throw new ApiError(400, "This treatment is not currently available", "TREATMENT_INACTIVE");
+  }
+  if (!(treatment.durationMinutes > 0)) {
+    throw new ApiError(500, "Treatment has an invalid duration", "DATA_INTEGRITY_ERROR");
+  }
+
+  const startTime = input.startTime;
+  const endTime = new Date(startTime.getTime() + treatment.durationMinutes * 60_000);
+
+  // No dentist working-hours/clinic-opening-hours validation exists in this
+  // milestone - any future non-overlapping time can technically be booked.
+  // Overlap is checked for both the dentist and the patient, using the same
+  // centralized comparison the admin module uses, so the two booking paths
+  // can never disagree on what counts as a conflict.
+  try {
+    await assertNoAppointmentOverlap(
+      clinicId,
+      { dentistId: input.dentistId },
+      startTime,
+      endTime,
+      "This dentist already has an appointment during that time - please choose another time",
+    );
+    await assertNoAppointmentOverlap(
+      clinicId,
+      { patientId },
+      startTime,
+      endTime,
+      "You already have an appointment during that time",
+    );
+  } catch (overlapError) {
+    // A concurrent duplicate submission with the same idempotency key can
+    // win the create race between our first idempotency check (above) and
+    // this overlap check - in that case the "conflict" this just found is
+    // that same request's own sibling, not a genuine double-booking. Treat
+    // it as an idempotent replay instead of surfacing a spurious 409.
+    const winner = await Appointment.findOne({ clinicId, patientId, idempotencyKey });
+    if (winner) {
+      return getPortalAppointmentDto(winner._id.toString(), clinicId);
+    }
+    throw overlapError;
+  }
+
+  let appointment;
+  try {
+    appointment = await Appointment.create({
+      clinicId,
+      patientId,
+      dentistId: input.dentistId,
+      treatmentId: input.treatmentId,
+      startTime,
+      endTime,
+      status: "scheduled",
+      idempotencyKey,
+    });
+  } catch (error) {
+    // A concurrent duplicate submission with the same idempotency key lost
+    // the create race - the unique index caught it server-side. Treat this
+    // exactly like the idempotent-replay path above rather than surfacing a
+    // raw duplicate-key error.
+    if (isDuplicateKeyError(error)) {
+      const winner = await Appointment.findOne({ clinicId, patientId, idempotencyKey });
+      if (winner) {
+        return getPortalAppointmentDto(winner._id.toString(), clinicId);
+      }
+    }
+    throw error;
+  }
+
+  return getPortalAppointmentDto(appointment._id.toString(), clinicId);
+}
+
+export async function cancelPortalAppointment(
+  clinicId: string,
+  patientId: string,
+  appointmentId: string,
+) {
+  const now = new Date();
+
+  // Single atomic conditional update - ownership, clinic, current status,
+  // and future-start-time are all part of the same filter, so there is no
+  // separate fetch-then-check step and no window for a race to slip through.
+  // Every failure mode (wrong patient, wrong clinic, already cancelled,
+  // completed, or in the past) collapses into the same "no document matched"
+  // outcome, which is reported identically below - this is deliberate: it
+  // never reveals which specific condition failed.
+  const updated = await Appointment.findOneAndUpdate(
+    {
+      _id: appointmentId,
+      clinicId,
+      patientId,
+      status: "scheduled",
+      startTime: { $gt: now },
+    },
+    { $set: { status: "cancelled" } },
+    { new: true },
+  );
+
+  if (!updated) {
+    throw new ApiError(404, "Appointment not found or cannot be cancelled", "NOT_FOUND");
+  }
+
+  return getPortalAppointmentDto(updated._id.toString(), clinicId);
 }
 
 // Deliberately lean - no lineItems on the list view. Excludes notes,

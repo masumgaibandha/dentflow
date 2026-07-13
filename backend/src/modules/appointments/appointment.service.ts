@@ -66,16 +66,24 @@ async function assertBelongsToClinic<T extends { clinicId: Types.ObjectId }>(
   }
 }
 
-async function assertNoOverlap(
+// Centralized so admin booking and patient portal booking can never develop
+// different overlap rules. `match` is merged into the query alongside
+// clinicId - every caller must include clinicId, which this signature
+// enforces by taking it as a separate required parameter rather than folding
+// it into `match`. Boundary-touching appointments (one ends exactly when the
+// other starts) are intentionally allowed: the range check is strict (<, >),
+// not inclusive.
+export async function assertNoAppointmentOverlap(
   clinicId: string,
-  dentistId: string,
+  match: FilterQuery<AppointmentDocument>,
   startTime: Date,
   endTime: Date,
+  message: string,
   excludeId?: string,
 ): Promise<void> {
   const filter: FilterQuery<AppointmentDocument> = {
     clinicId,
-    dentistId,
+    ...match,
     status: { $ne: "cancelled" },
     startTime: { $lt: endTime },
     endTime: { $gt: startTime },
@@ -87,12 +95,25 @@ async function assertNoOverlap(
 
   const conflict = await Appointment.findOne(filter);
   if (conflict) {
-    throw new ApiError(
-      409,
-      "This dentist already has an appointment during that time range",
-      "APPOINTMENT_OVERLAP",
-    );
+    throw new ApiError(409, message, "APPOINTMENT_OVERLAP");
   }
+}
+
+async function assertNoOverlap(
+  clinicId: string,
+  dentistId: string,
+  startTime: Date,
+  endTime: Date,
+  excludeId?: string,
+): Promise<void> {
+  await assertNoAppointmentOverlap(
+    clinicId,
+    { dentistId },
+    startTime,
+    endTime,
+    "This dentist already has an appointment during that time range",
+    excludeId,
+  );
 }
 
 function buildFilter(

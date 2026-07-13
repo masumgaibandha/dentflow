@@ -6,6 +6,10 @@ export interface DentistDocument extends Document {
   email?: string;
   phone?: string;
   specialty?: string;
+  // Defaults true so every existing dentist stays visible/bookable with no
+  // migration step; only relevant consumer today is the patient portal's
+  // booking lookup, which filters to isActive: true.
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +21,7 @@ const dentistSchema = new Schema<DentistDocument>(
     email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true },
     specialty: { type: String, trim: true },
+    isActive: { type: Boolean, default: true, required: true },
   },
   { timestamps: true },
 );
