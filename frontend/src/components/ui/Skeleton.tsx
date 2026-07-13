@@ -59,3 +59,25 @@ export function PatientRowSkeleton() {
     </tr>
   );
 }
+
+export function DentistRowSkeleton() {
+  return (
+    <tr>
+      <td className="p-3">
+        <Skeleton className="h-4 w-32" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-28" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-40" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-28" />
+      </td>
+    </tr>
+  );
+}

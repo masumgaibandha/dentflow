@@ -34,6 +34,10 @@ export function useLoginMutation() {
         queryKey: ["patients"],
       });
 
+      queryClient.removeQueries({
+        queryKey: ["dentists"],
+      });
+
       setToken(data.token);
 
       queryClient.setQueryData<MeResponse>(ME_QUERY_KEY, {
@@ -89,6 +93,10 @@ export function useLogout() {
 
     queryClient.removeQueries({
       queryKey: ["patients"],
+    });
+
+    queryClient.removeQueries({
+      queryKey: ["dentists"],
     });
 
     queryClient.removeQueries({
