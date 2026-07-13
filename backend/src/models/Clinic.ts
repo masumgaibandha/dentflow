@@ -6,6 +6,10 @@ export interface ClinicDocument extends Document {
   address?: string;
   phone?: string;
   email?: string;
+  // IANA timezone name (e.g. "America/New_York"). No settings UI sets this
+  // yet - when absent, dashboard date-boundary calculations fall back to
+  // utils/timezone.ts's DEFAULT_TIMEZONE ("UTC"), never a hardcoded clinic.
+  timezone?: string;
   invoiceSequence: number;
   createdAt: Date;
   updatedAt: Date;
@@ -21,6 +25,7 @@ const clinicSchema = new Schema<ClinicDocument>(
     address: { type: String, trim: true },
     phone: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
+    timezone: { type: String, trim: true },
     // Incremented atomically (via $inc) to generate unique per-clinic invoice numbers.
     invoiceSequence: { type: Number, default: 0 },
   },
