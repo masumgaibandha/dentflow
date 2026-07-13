@@ -42,6 +42,10 @@ export function useLoginMutation() {
         queryKey: ["appointments"],
       });
 
+      queryClient.removeQueries({
+        queryKey: ["invoices"],
+      });
+
       setToken(data.token);
 
       queryClient.setQueryData<MeResponse>(ME_QUERY_KEY, {
@@ -105,6 +109,10 @@ export function useLogout() {
 
     queryClient.removeQueries({
       queryKey: ["appointments"],
+    });
+
+    queryClient.removeQueries({
+      queryKey: ["invoices"],
     });
 
     queryClient.removeQueries({

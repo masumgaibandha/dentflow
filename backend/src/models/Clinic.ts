@@ -6,6 +6,7 @@ export interface ClinicDocument extends Document {
   address?: string;
   phone?: string;
   email?: string;
+  invoiceSequence: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +21,8 @@ const clinicSchema = new Schema<ClinicDocument>(
     address: { type: String, trim: true },
     phone: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
+    // Incremented atomically (via $inc) to generate unique per-clinic invoice numbers.
+    invoiceSequence: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
