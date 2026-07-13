@@ -49,7 +49,14 @@ export function useUpdateUserStatus() {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       updateUserStatus(id, isActive, requireToken()),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
+      // Shared by both the Staff page and the Patients page's "Portal
+      // account" toggle - reused as-is (it's already just id+isActive with
+      // no role assumption), so both caches are kept fresh regardless of
+      // which surface triggered the change.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [USERS_KEY] }),
+        queryClient.invalidateQueries({ queryKey: ["patients"] }),
+      ]);
     },
   });
 }

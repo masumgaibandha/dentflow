@@ -25,7 +25,13 @@ export default function LoginPage() {
       try {
         const result = await loginMutation.mutateAsync(values);
         toast.success("Logged in successfully.");
-        router.push(result.user.role === "staff" ? "/appointments" : "/dashboard");
+        const destination =
+          result.user.role === "patient"
+            ? "/portal"
+            : result.user.role === "staff"
+              ? "/appointments"
+              : "/dashboard";
+        router.push(destination);
       } catch (error) {
         toast.error(getErrorMessage(error));
       }

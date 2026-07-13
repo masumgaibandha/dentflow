@@ -3,12 +3,18 @@ import { ApiError } from "../../utils/ApiError";
 import { asyncHandler } from "../../utils/asyncHandler";
 import {
   createPatient,
+  createPortalAccount,
   deletePatient,
   getPatientById,
   listPatients,
   updatePatient,
 } from "./patient.service";
-import { listPatientsQuerySchema, patientInputSchema, updatePatientSchema } from "./patient.validation";
+import {
+  createPortalAccountSchema,
+  listPatientsQuerySchema,
+  patientInputSchema,
+  updatePatientSchema,
+} from "./patient.validation";
 
 function parseListQuery(req: Request) {
   const parsedQuery = listPatientsQuerySchema.safeParse(req.query);
@@ -25,12 +31,12 @@ function parseListQuery(req: Request) {
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const query = parseListQuery(req);
-  const result = await listPatients(req.user!.clinicId, query);
+  const result = await listPatients(req.user!.clinicId, query, req.user!.role);
   res.json(result);
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
-  const result = await getPatientById(String(req.params.id), req.user!.clinicId);
+  const result = await getPatientById(String(req.params.id), req.user!.clinicId, req.user!.role);
   res.json(result);
 });
 
@@ -65,4 +71,18 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await deletePatient(String(req.params.id), req.user!.clinicId);
   res.status(204).send();
+});
+
+export const createPortalAccountHandler = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = createPortalAccountSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ApiError(
+      400,
+      parsed.error.issues[0]?.message ?? "Invalid input",
+      "VALIDATION_ERROR",
+    );
+  }
+
+  const result = await createPortalAccount(String(req.params.id), req.user!.clinicId, parsed.data);
+  res.status(201).json(result);
 });

@@ -43,10 +43,23 @@ export const requireAuth = asyncHandler(
       return;
     }
 
-    // Derived from the live record (not the JWT) so a role change would take
-    // effect immediately too, even though this milestone doesn't yet expose
-    // role editing.
-    req.user = { userId: user._id.toString(), clinicId: user.clinicId.toString(), role: user.role };
+    if (user.role === "patient" && !user.patientId) {
+      next(
+        new ApiError(500, "Patient account is missing its linked record", "DATA_INTEGRITY_ERROR"),
+      );
+      return;
+    }
+
+    // Derived from the live record (not the JWT) so a role change - or a
+    // patient's linked record - would take effect immediately too. patientId
+    // in particular is never read from the token: it's resolved fresh here on
+    // every request so it can never be forged or go stale after unlinking.
+    req.user = {
+      userId: user._id.toString(),
+      clinicId: user.clinicId.toString(),
+      role: user.role,
+      patientId: user.patientId?.toString(),
+    };
     next();
   },
 );

@@ -10,6 +10,7 @@ import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { dentistRouter } from "./modules/dentists/dentist.routes";
 import { invoiceRouter } from "./modules/invoices/invoice.routes";
 import { patientRouter } from "./modules/patients/patient.routes";
+import { portalRouter } from "./modules/portal/portal.routes";
 import { treatmentRouter } from "./modules/treatments/treatment.routes";
 import { userRouter } from "./modules/users/user.routes";
 
@@ -32,6 +33,7 @@ export function createApp(): Express {
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/clinics", clinicRouter);
   app.use("/api/users", userRouter);
+  app.use("/api/portal", portalRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

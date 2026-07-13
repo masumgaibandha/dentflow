@@ -9,6 +9,9 @@ export interface UserDocument extends Document {
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  // Only ever set when role === "patient" - links this login to exactly one
+  // Patient record. Admin/staff Users must never have this field.
+  patientId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,9 +31,14 @@ const userSchema = new Schema<UserDocument>(
     // Default true so every pre-existing user (created before this field
     // existed) is implicitly still active.
     isActive: { type: Boolean, default: true, required: true },
+    patientId: { type: Schema.Types.ObjectId, ref: "Patient" },
   },
   { timestamps: true },
 );
+
+// Sparse so admin/staff Users (which never set this field) don't collide on
+// the unique constraint - only enforces "one portal account per Patient."
+userSchema.index({ patientId: 1 }, { unique: true, sparse: true });
 
 export const User =
   (models.User as Model<UserDocument>) || model<UserDocument>("User", userSchema);

@@ -6,11 +6,16 @@ export function PatientTable({
   isLoading,
   onEdit,
   onDelete,
+  onManagePortalAccount,
 }: {
   patients: Patient[];
   isLoading: boolean;
   onEdit: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
+  // Omit entirely (not just hide) for staff - the backend only ever includes
+  // `portalAccount` on the patient DTO for admins, so this prop simply isn't
+  // passed by the staff-facing page and the column never renders for them.
+  onManagePortalAccount?: (patient: Patient) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
@@ -56,6 +61,17 @@ export function PatientTable({
                     >
                       Edit
                     </button>
+                    {onManagePortalAccount && patient.portalAccount !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => onManagePortalAccount(patient)}
+                        className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                      >
+                        {patient.portalAccount
+                          ? `Portal: ${patient.portalAccount.isActive ? "active" : "inactive"}`
+                          : "Link portal account"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => onDelete(patient)}

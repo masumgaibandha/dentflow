@@ -3,10 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createPatient,
+  createPortalAccount,
   deletePatient,
   getPatient,
   listPatients,
   updatePatient,
+  type CreatePortalAccountInput,
   type ListPatientsParams,
   type PatientInput,
 } from "@/lib/api/patientsApi";
@@ -69,6 +71,18 @@ export function useDeletePatient() {
 
   return useMutation({
     mutationFn: (id: string) => deletePatient(id, requireToken()),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [PATIENTS_KEY] });
+    },
+  });
+}
+
+export function useCreatePortalAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ patientId, input }: { patientId: string; input: CreatePortalAccountInput }) =>
+      createPortalAccount(patientId, input, requireToken()),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: [PATIENTS_KEY] });
     },

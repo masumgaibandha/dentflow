@@ -18,10 +18,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
     if (!isLoading && (isError || !data)) {
       router.replace("/login");
+      return;
+    }
+    // Patients have their own separate portal shell/nav - never the
+    // admin/staff dashboard, regardless of which admin/staff URL they land on.
+    if (!isLoading && data?.user.role === "patient") {
+      router.replace("/portal");
     }
   }, [isLoading, isError, data, router]);
 
-  if (!getToken() || isLoading || !data) {
+  if (!getToken() || isLoading || !data || data.user.role === "patient") {
     return (
       <div className="flex flex-1 items-center justify-center py-32">
         <p className="text-zinc-500 dark:text-zinc-400">Loading...</p>

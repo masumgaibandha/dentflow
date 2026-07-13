@@ -23,3 +23,15 @@ export const listPatientsQuerySchema = z.object({
 });
 
 export type ListPatientsQuery = z.infer<typeof listPatientsQuerySchema>;
+
+// .strict() rejects the request outright (400) if it contains any other key -
+// clinicId, patientId, role, isActive, name, passwordHash, or anything else -
+// rather than silently ignoring them.
+export const createPortalAccountSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email("Enter a valid email"),
+    initialPassword: z.string().min(8, "Password must be at least 8 characters"),
+  })
+  .strict();
+
+export type CreatePortalAccountInput = z.infer<typeof createPortalAccountSchema>;

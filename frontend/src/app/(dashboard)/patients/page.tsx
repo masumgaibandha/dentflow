@@ -5,19 +5,23 @@ import { toast } from "sonner";
 import { PatientFilters, type PatientFiltersValue } from "@/components/patients/PatientFilters";
 import { PatientForm } from "@/components/patients/PatientForm";
 import { PatientTable } from "@/components/patients/PatientTable";
+import { PortalAccountForm } from "@/components/patients/PortalAccountForm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 import { useMe } from "@/hooks/useAuth";
 import {
   useCreatePatient,
+  useCreatePortalAccount,
   useDeletePatient,
   usePatientsList,
   useUpdatePatient,
 } from "@/hooks/usePatients";
+import { useUpdateUserStatus } from "@/hooks/useUsers";
 import type { Patient } from "@/lib/api/patientsApi";
 import { getErrorMessage } from "@/lib/errors";
 import type { PatientFormValues } from "@/validators/patient";
+import type { CreatePortalAccountFormValues } from "@/validators/portalAccount";
 
 const DEFAULT_FILTERS: PatientFiltersValue = {
   search: "",
@@ -32,6 +36,8 @@ export default function PatientsPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
+  const [portalAccountPatient, setPortalAccountPatient] = useState<Patient | null>(null);
+  const [togglingPortalPatient, setTogglingPortalPatient] = useState<Patient | null>(null);
 
   const queryParams = useMemo(
     () => ({
@@ -48,6 +54,8 @@ export default function PatientsPage() {
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
   const deletePatient = useDeletePatient();
+  const createPortalAccount = useCreatePortalAccount();
+  const updatePortalStatus = useUpdateUserStatus();
 
   function handleFiltersChange(next: PatientFiltersValue) {
     setFilters(next);
@@ -97,6 +105,38 @@ export default function PatientsPage() {
     }
   }
 
+  async function handleCreatePortalAccount(values: CreatePortalAccountFormValues) {
+    if (!portalAccountPatient) return;
+    try {
+      await createPortalAccount.mutateAsync({ patientId: portalAccountPatient.id, input: values });
+      toast.success("Portal account created.");
+      setPortalAccountPatient(null);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
+
+  async function handleTogglePortalStatus() {
+    const account = togglingPortalPatient?.portalAccount;
+    if (!togglingPortalPatient || !account) return;
+    try {
+      await updatePortalStatus.mutateAsync({ id: account.id, isActive: !account.isActive });
+      toast.success(account.isActive ? "Portal account deactivated." : "Portal account activated.");
+      setTogglingPortalPatient(null);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      setTogglingPortalPatient(null);
+    }
+  }
+
+  function handleManagePortalAccount(patient: Patient) {
+    if (patient.portalAccount) {
+      setTogglingPortalPatient(patient);
+    } else {
+      setPortalAccountPatient(patient);
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -138,6 +178,7 @@ export default function PatientsPage() {
               isLoading={isLoading}
               onEdit={setEditingPatient}
               onDelete={setDeletingPatient}
+              onManagePortalAccount={me?.user.role === "admin" ? handleManagePortalAccount : undefined}
             />
           </div>
           {data && (
@@ -189,6 +230,38 @@ export default function PatientsPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeletingPatient(null)}
         isLoading={deletePatient.isPending}
+      />
+
+      <Modal
+        open={Boolean(portalAccountPatient)}
+        title={`Portal account for ${portalAccountPatient?.name ?? ""}`}
+        onClose={() => setPortalAccountPatient(null)}
+      >
+        <PortalAccountForm
+          onSubmit={handleCreatePortalAccount}
+          isSubmitting={createPortalAccount.isPending}
+        />
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(togglingPortalPatient?.portalAccount)}
+        title={
+          togglingPortalPatient?.portalAccount?.isActive
+            ? "Deactivate portal account"
+            : "Activate portal account"
+        }
+        description={
+          togglingPortalPatient?.portalAccount?.isActive
+            ? `Are you sure you want to deactivate ${togglingPortalPatient?.name}'s portal account? They will be signed out immediately and won't be able to log back in until reactivated.`
+            : `Are you sure you want to reactivate ${togglingPortalPatient?.name}'s portal account? They will be able to log in again.`
+        }
+        confirmLabel={togglingPortalPatient?.portalAccount?.isActive ? "Deactivate" : "Activate"}
+        loadingLabel={
+          togglingPortalPatient?.portalAccount?.isActive ? "Deactivating..." : "Activating..."
+        }
+        onConfirm={handleTogglePortalStatus}
+        onCancel={() => setTogglingPortalPatient(null)}
+        isLoading={updatePortalStatus.isPending}
       />
     </div>
   );

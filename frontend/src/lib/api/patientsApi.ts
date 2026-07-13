@@ -1,5 +1,11 @@
 import { apiFetch } from "@/lib/api/client";
 
+export interface PortalAccountInfo {
+  id: string;
+  email: string;
+  isActive: boolean;
+}
+
 export interface Patient {
   id: string;
   clinicId: string;
@@ -10,6 +16,8 @@ export interface Patient {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  // Only ever present for admins (backend omits the key entirely for staff).
+  portalAccount?: PortalAccountInfo | null;
 }
 
 export interface Pagination {
@@ -93,6 +101,23 @@ export function updatePatient(
 export function deletePatient(id: string, token: string): Promise<void> {
   return apiFetch<void>(`/api/patients/${id}`, {
     method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export interface CreatePortalAccountInput {
+  email: string;
+  initialPassword: string;
+}
+
+export function createPortalAccount(
+  patientId: string,
+  input: CreatePortalAccountInput,
+  token: string,
+): Promise<PortalAccountInfo> {
+  return apiFetch<PortalAccountInfo>(`/api/patients/${patientId}/portal-account`, {
+    method: "POST",
+    body: JSON.stringify(input),
     headers: authHeaders(token),
   });
 }
