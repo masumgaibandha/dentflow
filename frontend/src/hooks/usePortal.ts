@@ -1,7 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getPortalMe } from "@/lib/api/portalApi";
+import {
+  getPortalAppointments,
+  getPortalMe,
+  type ListPortalAppointmentsParams,
+} from "@/lib/api/portalApi";
 import { getToken } from "@/lib/auth/token";
 
 const PORTAL_KEY = "portal";
@@ -22,5 +26,14 @@ export function usePortalMe() {
     queryFn: () => getPortalMe(requireToken()),
     enabled: Boolean(getToken()),
     retry: false,
+  });
+}
+
+export function usePortalAppointments(params: ListPortalAppointmentsParams) {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "appointments", params],
+    queryFn: () => getPortalAppointments(params, requireToken()),
+    enabled: Boolean(getToken()),
+    placeholderData: (previousData) => previousData,
   });
 }
