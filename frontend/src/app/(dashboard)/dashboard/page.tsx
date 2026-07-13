@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { StatCard, StatCardSkeleton } from "@/components/dashboard/StatCard";
+import { AdminOnly } from "@/components/layout/AdminOnly";
 import { useMe } from "@/hooks/useAuth";
 import { useDashboardSummary } from "@/hooks/useDashboard";
 
@@ -11,6 +12,14 @@ function formatCents(cents: number): string {
 }
 
 export default function DashboardPage() {
+  return (
+    <AdminOnly>
+      <DashboardContent />
+    </AdminOnly>
+  );
+}
+
+function DashboardContent() {
   const { data: me } = useMe();
   const { data, isLoading, isError, refetch } = useDashboardSummary(me?.clinic.id);
 

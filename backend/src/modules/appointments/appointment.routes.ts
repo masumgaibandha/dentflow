@@ -5,7 +5,7 @@ import { cancel, create, getOne, list, remove, update } from "./appointment.cont
 
 export const appointmentRouter = Router();
 
-appointmentRouter.use(requireAuth, requireRole("admin"));
+appointmentRouter.use(requireAuth, requireRole("admin", "staff"));
 
 appointmentRouter.get("/", list);
 appointmentRouter.get("/:id", getOne);

@@ -11,6 +11,7 @@ import { dentistRouter } from "./modules/dentists/dentist.routes";
 import { invoiceRouter } from "./modules/invoices/invoice.routes";
 import { patientRouter } from "./modules/patients/patient.routes";
 import { treatmentRouter } from "./modules/treatments/treatment.routes";
+import { userRouter } from "./modules/users/user.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp(): Express {
   app.use("/api/invoices", invoiceRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/clinics", clinicRouter);
+  app.use("/api/users", userRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

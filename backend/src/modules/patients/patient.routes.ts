@@ -5,7 +5,7 @@ import { create, getOne, list, remove, update } from "./patient.controller";
 
 export const patientRouter = Router();
 
-patientRouter.use(requireAuth, requireRole("admin"));
+patientRouter.use(requireAuth, requireRole("admin", "staff"));
 
 patientRouter.get("/", list);
 patientRouter.get("/:id", getOne);

@@ -23,9 +23,9 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(
     async (values) => {
       try {
-        await loginMutation.mutateAsync(values);
+        const result = await loginMutation.mutateAsync(values);
         toast.success("Logged in successfully.");
-        router.push("/dashboard");
+        router.push(result.user.role === "staff" ? "/appointments" : "/dashboard");
       } catch (error) {
         toast.error(getErrorMessage(error));
       }

@@ -8,6 +8,7 @@ export interface UserDocument extends Document {
   email: string;
   passwordHash: string;
   role: UserRole;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,9 @@ const userSchema = new Schema<UserDocument>(
       default: "admin",
       required: true,
     },
+    // Default true so every pre-existing user (created before this field
+    // existed) is implicitly still active.
+    isActive: { type: Boolean, default: true, required: true },
   },
   { timestamps: true },
 );

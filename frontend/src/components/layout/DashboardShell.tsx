@@ -38,9 +38,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <p className="font-medium">{data.user.name}</p>
           </div>
           <nav className="flex items-center gap-4 text-sm">
-            <Link href="/dashboard" className="hover:underline">
-              Dashboard
-            </Link>
+            {data.user.role === "admin" && (
+              <Link href="/dashboard" className="hover:underline">
+                Dashboard
+              </Link>
+            )}
             <Link href="/patients" className="hover:underline">
               Patients
             </Link>
@@ -50,15 +52,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link href="/appointments" className="hover:underline">
               Appointments
             </Link>
-            <Link href="/invoices" className="hover:underline">
-              Invoices
-            </Link>
-            <Link href="/items/manage" className="hover:underline">
-              Services
-            </Link>
-            <Link href="/settings" className="hover:underline">
-              Settings
-            </Link>
+            {data.user.role === "admin" && (
+              <>
+                <Link href="/invoices" className="hover:underline">
+                  Invoices
+                </Link>
+                <Link href="/items/manage" className="hover:underline">
+                  Services
+                </Link>
+                <Link href="/settings" className="hover:underline">
+                  Settings
+                </Link>
+                <Link href="/settings/users" className="hover:underline">
+                  Staff
+                </Link>
+              </>
+            )}
           </nav>
         </div>
         <button

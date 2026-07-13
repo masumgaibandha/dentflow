@@ -12,7 +12,7 @@ import {
 
 export const treatmentRouter = Router();
 
-treatmentRouter.get("/admin", requireAuth, requireRole("admin"), listAdminTreatments);
+treatmentRouter.get("/admin", requireAuth, requireRole("admin", "staff"), listAdminTreatments);
 treatmentRouter.get("/", listPublicTreatments);
 treatmentRouter.get("/:id", getPublicTreatment);
 treatmentRouter.post("/", requireAuth, requireRole("admin"), create);

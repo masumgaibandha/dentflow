@@ -6,6 +6,7 @@ import { InvoiceFilters, type InvoiceFiltersValue } from "@/components/invoices/
 import { InvoiceForm, type InvoiceFormDefaults } from "@/components/invoices/InvoiceForm";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
 import { MarkPaidForm } from "@/components/invoices/MarkPaidForm";
+import { AdminOnly } from "@/components/layout/AdminOnly";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
@@ -29,6 +30,14 @@ const DEFAULT_FILTERS: InvoiceFiltersValue = {
 };
 
 export default function InvoicesPage() {
+  return (
+    <AdminOnly>
+      <InvoicesPageContent />
+    </AdminOnly>
+  );
+}
+
+function InvoicesPageContent() {
   const { data: me } = useMe();
   const [filters, setFilters] = useState<InvoiceFiltersValue>(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);

@@ -84,6 +84,17 @@ export async function loginUser(input: LoginInput) {
     throw new ApiError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
+  // Checked only after the password has already been verified, so a
+  // deactivated account's status is never leaked to someone who doesn't
+  // actually know the password.
+  if (!user.isActive) {
+    throw new ApiError(
+      401,
+      "This account has been deactivated. Contact your clinic administrator.",
+      "ACCOUNT_DEACTIVATED",
+    );
+  }
+
   const clinicRecord = await Clinic.findById(user.clinicId);
   if (!clinicRecord) {
     throw new ApiError(500, "Clinic record missing for user", "DATA_INTEGRITY_ERROR");
@@ -103,6 +114,17 @@ export async function getCurrentUser(userId: string) {
   const user = await User.findById(userId);
   if (!user) {
     throw new ApiError(401, "User not found", "UNAUTHENTICATED");
+  }
+
+  // requireAuth already blocks deactivated accounts before any route runs,
+  // but this endpoint checks again directly since it's the client's source
+  // of truth for "am I still signed in" - defense in depth.
+  if (!user.isActive) {
+    throw new ApiError(
+      401,
+      "This account has been deactivated. Contact your clinic administrator.",
+      "ACCOUNT_DEACTIVATED",
+    );
   }
 
   const clinicRecord = await Clinic.findById(user.clinicId);
