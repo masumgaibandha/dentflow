@@ -4,6 +4,7 @@ import { env } from "./config/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFound";
 import { authRouter } from "./modules/auth/auth.routes";
+import { patientRouter } from "./modules/patients/patient.routes";
 import { treatmentRouter } from "./modules/treatments/treatment.routes";
 
 export function createApp(): Express {
@@ -18,6 +19,7 @@ export function createApp(): Express {
 
   app.use("/api/auth", authRouter);
   app.use("/api/treatments", treatmentRouter);
+  app.use("/api/patients", patientRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

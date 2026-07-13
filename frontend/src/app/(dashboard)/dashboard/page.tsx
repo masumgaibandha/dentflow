@@ -12,7 +12,7 @@ export default function DashboardPage() {
       </h1>
       <p className="mt-1 text-zinc-600 dark:text-zinc-400">
         You&apos;re signed in as {data?.user.role} at {data?.clinic.name}. Appointment
-        management, patient records, and reporting land in upcoming milestones.
+        management and reporting land in upcoming milestones.
       </p>
     </div>
   );

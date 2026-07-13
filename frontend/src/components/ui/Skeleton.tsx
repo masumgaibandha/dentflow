@@ -37,3 +37,25 @@ export function TreatmentRowSkeleton() {
     </tr>
   );
 }
+
+export function PatientRowSkeleton() {
+  return (
+    <tr>
+      <td className="p-3">
+        <Skeleton className="h-4 w-32" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-40" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-20" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+    </tr>
+  );
+}
