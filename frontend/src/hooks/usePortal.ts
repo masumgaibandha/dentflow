@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  createPortalInvoicePaymentIntent,
   getPortalAppointments,
   getPortalInvoice,
   getPortalInvoices,
   getPortalMe,
+  verifyPortalInvoicePayment,
   type ListPortalAppointmentsParams,
   type ListPortalInvoicesParams,
 } from "@/lib/api/portalApi";
@@ -55,5 +57,32 @@ export function usePortalInvoice(id: string) {
     queryKey: [PORTAL_KEY, "invoices", "detail", id],
     queryFn: () => getPortalInvoice(id, requireToken()),
     enabled: Boolean(getToken()) && Boolean(id),
+  });
+}
+
+// clientSecret/paymentIntentId returned here are never written to the query
+// cache, localStorage, sessionStorage, cookies, or the URL - callers must
+// hold the result in component state only, for the lifetime of the payment
+// form, and let it be discarded on unmount/navigation.
+export function useCreatePortalPaymentIntent() {
+  return useMutation({
+    mutationFn: (invoiceId: string) => createPortalInvoicePaymentIntent(invoiceId, requireToken()),
+  });
+}
+
+export function useVerifyPortalPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      invoiceId,
+      paymentIntentId,
+    }: {
+      invoiceId: string;
+      paymentIntentId: string;
+    }) => verifyPortalInvoicePayment(invoiceId, paymentIntentId, requireToken()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "invoices"] });
+    },
   });
 }

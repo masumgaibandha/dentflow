@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PortalInvoiceDetails } from "@/components/portal/PortalInvoiceDetails";
 import { PortalInvoicesTable } from "@/components/portal/PortalInvoicesTable";
+import { PortalPayInvoiceButton } from "@/components/portal/PortalPayInvoiceButton";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 import { usePortalInvoice, usePortalInvoicesList } from "@/hooks/usePortal";
@@ -78,7 +79,12 @@ export default function PortalInvoicesPage() {
             Something went wrong loading this invoice.
           </p>
         )}
-        {invoiceDetail && <PortalInvoiceDetails invoice={invoiceDetail} />}
+        {invoiceDetail && (
+          <div className="flex flex-col gap-4">
+            <PortalInvoiceDetails invoice={invoiceDetail} />
+            <PortalPayInvoiceButton invoice={invoiceDetail} />
+          </div>
+        )}
       </Modal>
     </div>
   );

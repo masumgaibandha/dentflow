@@ -33,3 +33,14 @@ export const invoiceIdParamSchema = z
   .string()
   .trim()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid invoice id");
+
+// .strict() so a client cannot smuggle amount/currency/status alongside the
+// PaymentIntent id - the only thing this endpoint trusts from the client at
+// all is which PaymentIntent to re-verify against Stripe directly.
+export const verifyPaymentSchema = z
+  .object({
+    paymentIntentId: z.string().trim().min(1, "paymentIntentId is required"),
+  })
+  .strict();
+
+export type VerifyPaymentInput = z.infer<typeof verifyPaymentSchema>;

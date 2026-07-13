@@ -2,15 +2,18 @@ import type { Request, Response } from "express";
 import { ApiError } from "../../utils/ApiError";
 import { asyncHandler } from "../../utils/asyncHandler";
 import {
+  createInvoicePaymentIntent,
   getPortalAppointments,
   getPortalInvoiceById,
   getPortalMe,
   listPortalInvoices,
+  verifyInvoicePayment,
 } from "./portal.service";
 import {
   invoiceIdParamSchema,
   listPortalInvoicesQuerySchema,
   portalAppointmentsQuerySchema,
+  verifyPaymentSchema,
 } from "./portal.validation";
 
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
@@ -63,6 +66,43 @@ export const getInvoice = asyncHandler(async (req: Request, res: Response) => {
     req.user!.clinicId,
     req.user!.patientId!,
     parsedId.data,
+  );
+  res.json(result);
+});
+
+export const createPaymentIntent = asyncHandler(async (req: Request, res: Response) => {
+  const parsedId = invoiceIdParamSchema.safeParse(req.params.id);
+  if (!parsedId.success) {
+    throw new ApiError(400, parsedId.error.issues[0]?.message ?? "Invalid invoice id", "VALIDATION_ERROR");
+  }
+
+  const result = await createInvoicePaymentIntent(
+    req.user!.clinicId,
+    req.user!.patientId!,
+    parsedId.data,
+  );
+  res.json(result);
+});
+
+export const verifyPayment = asyncHandler(async (req: Request, res: Response) => {
+  const parsedId = invoiceIdParamSchema.safeParse(req.params.id);
+  if (!parsedId.success) {
+    throw new ApiError(400, parsedId.error.issues[0]?.message ?? "Invalid invoice id", "VALIDATION_ERROR");
+  }
+  const parsedBody = verifyPaymentSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    throw new ApiError(
+      400,
+      parsedBody.error.issues[0]?.message ?? "Invalid request body",
+      "VALIDATION_ERROR",
+    );
+  }
+
+  const result = await verifyInvoicePayment(
+    req.user!.clinicId,
+    req.user!.patientId!,
+    parsedId.data,
+    parsedBody.data.paymentIntentId,
   );
   res.json(result);
 });

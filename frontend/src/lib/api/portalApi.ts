@@ -127,3 +127,30 @@ export function getPortalInvoice(id: string, token: string): Promise<PortalInvoi
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export interface PortalPaymentIntent {
+  clientSecret: string;
+  paymentIntentId: string;
+}
+
+export function createPortalInvoicePaymentIntent(
+  invoiceId: string,
+  token: string,
+): Promise<PortalPaymentIntent> {
+  return apiFetch<PortalPaymentIntent>(`/api/portal/invoices/${invoiceId}/payment-intent`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function verifyPortalInvoicePayment(
+  invoiceId: string,
+  paymentIntentId: string,
+  token: string,
+): Promise<PortalInvoiceDetail> {
+  return apiFetch<PortalInvoiceDetail>(`/api/portal/invoices/${invoiceId}/verify-payment`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ paymentIntentId }),
+  });
+}

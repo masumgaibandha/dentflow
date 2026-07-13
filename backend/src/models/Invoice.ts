@@ -20,10 +20,14 @@ export interface InvoiceLineItem {
 }
 
 export interface InvoicePayment {
-  provider: "manual";
+  provider: "manual" | "stripe";
   method: PaymentMethod;
   paidAt: Date;
   reference?: string;
+  // Only set when provider is "stripe" - the PaymentIntent id, a safe
+  // reference (never the full Stripe response) for looking up the matching
+  // PaymentTransaction document.
+  stripePaymentIntentId?: string;
 }
 
 export interface InvoiceDocument extends Document {
@@ -53,10 +57,11 @@ const lineItemSchema = new Schema<InvoiceLineItem>(
 
 const paymentSchema = new Schema<InvoicePayment>(
   {
-    provider: { type: String, enum: ["manual"], required: true, default: "manual" },
+    provider: { type: String, enum: ["manual", "stripe"], required: true, default: "manual" },
     method: { type: String, enum: PAYMENT_METHODS, required: true },
     paidAt: { type: Date, required: true },
     reference: { type: String, trim: true },
+    stripePaymentIntentId: { type: String, trim: true },
   },
   { _id: false },
 );
