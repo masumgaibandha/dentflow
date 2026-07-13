@@ -1,10 +1,11 @@
 import type { FilterQuery } from "mongoose";
 import { Appointment, type AppointmentDocument } from "../../models/Appointment";
 import { Clinic } from "../../models/Clinic";
+import { Invoice, type InvoiceDocument } from "../../models/Invoice";
 import { Patient } from "../../models/Patient";
 import { User } from "../../models/User";
 import { ApiError } from "../../utils/ApiError";
-import type { PortalAppointmentsQuery } from "./portal.validation";
+import type { ListPortalInvoicesQuery, PortalAppointmentsQuery } from "./portal.validation";
 
 const DENTIST_POPULATE = { path: "dentistId", select: "name clinicId" };
 const TREATMENT_POPULATE = { path: "treatmentId", select: "title clinicId" };
@@ -114,4 +115,79 @@ export async function getPortalAppointments(
       totalPages: Math.max(1, Math.ceil(total / query.limit)),
     },
   };
+}
+
+// Deliberately lean - no lineItems on the list view. Excludes notes,
+// clinicId, patientId, appointmentId, invoiceSequence, payment.provider, and
+// every other internal field, even though they exist on the Invoice model.
+function toPortalInvoiceListDto(invoice: InvoiceDocument) {
+  return {
+    id: invoice._id.toString(),
+    invoiceNumber: invoice.invoiceNumber,
+    totalCents: invoice.totalCents,
+    status: invoice.status,
+    createdAt: invoice.createdAt,
+    paidAt: invoice.payment?.paidAt ?? null,
+  };
+}
+
+function toPortalInvoiceDetailDto(invoice: InvoiceDocument) {
+  return {
+    id: invoice._id.toString(),
+    invoiceNumber: invoice.invoiceNumber,
+    lineItems: invoice.lineItems.map((item) => ({
+      title: item.title,
+      quantity: item.quantity,
+      unitPriceCents: item.unitPriceCents,
+      lineTotalCents: item.lineTotalCents,
+    })),
+    subtotalCents: invoice.subtotalCents,
+    totalCents: invoice.totalCents,
+    status: invoice.status,
+    payment: invoice.payment
+      ? {
+          method: invoice.payment.method,
+          paidAt: invoice.payment.paidAt,
+          reference: invoice.payment.reference,
+        }
+      : null,
+    createdAt: invoice.createdAt,
+  };
+}
+
+export async function listPortalInvoices(
+  clinicId: string,
+  patientId: string,
+  query: ListPortalInvoicesQuery,
+) {
+  // clinicId and patientId come from the live req.user - the initial Mongo
+  // filter, not a post-fetch check.
+  const filter: FilterQuery<InvoiceDocument> = { clinicId, patientId };
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    Invoice.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit),
+    Invoice.countDocuments(filter),
+  ]);
+
+  return {
+    data: items.map(toPortalInvoiceListDto),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    },
+  };
+}
+
+export async function getPortalInvoiceById(clinicId: string, patientId: string, invoiceId: string) {
+  // A single ownership-scoped query - never findById-then-check. An invoice
+  // belonging to another patient in the same clinic, or another clinic
+  // entirely, simply never matches this filter and 404s either way.
+  const invoice = await Invoice.findOne({ _id: invoiceId, clinicId, patientId });
+  if (!invoice) {
+    throw new ApiError(404, "Invoice not found", "NOT_FOUND");
+  }
+  return toPortalInvoiceDetailDto(invoice);
 }

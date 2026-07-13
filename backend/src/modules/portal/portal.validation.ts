@@ -14,3 +14,22 @@ export const portalAppointmentsQuerySchema = z
   .strict();
 
 export type PortalAppointmentsQuery = z.infer<typeof portalAppointmentsQuerySchema>;
+
+// Sort is intentionally not a parameter at all: fixed to createdAt descending
+// (see portal.service.ts). Only page/limit are accepted.
+export const listPortalInvoicesQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+  })
+  .strict();
+
+export type ListPortalInvoicesQuery = z.infer<typeof listPortalInvoicesQuerySchema>;
+
+// Validates the :id route param before it ever reaches a Mongo query, so a
+// malformed id produces a controlled 400 instead of a Mongoose CastError
+// surfacing as a 500.
+export const invoiceIdParamSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid invoice id");

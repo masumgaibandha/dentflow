@@ -64,3 +64,66 @@ export function getPortalAppointments(
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export type PortalInvoiceStatus = "unpaid" | "paid" | "void";
+export type PortalPaymentMethod = "cash" | "card" | "bank_transfer" | "mobile_banking";
+
+export interface PortalInvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  totalCents: number;
+  status: PortalInvoiceStatus;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+export interface PortalInvoiceLineItem {
+  title: string;
+  quantity: number;
+  unitPriceCents: number;
+  lineTotalCents: number;
+}
+
+export interface PortalInvoiceDetail {
+  id: string;
+  invoiceNumber: string;
+  lineItems: PortalInvoiceLineItem[];
+  subtotalCents: number;
+  totalCents: number;
+  status: PortalInvoiceStatus;
+  payment: { method: PortalPaymentMethod; paidAt: string; reference?: string } | null;
+  createdAt: string;
+}
+
+export interface ListPortalInvoicesResponse {
+  data: PortalInvoiceListItem[];
+  pagination: Pagination;
+}
+
+export interface ListPortalInvoicesParams {
+  page?: number;
+  limit?: number;
+}
+
+function buildInvoicesQueryString(params: ListPortalInvoicesParams): string {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  return query.toString();
+}
+
+export function getPortalInvoices(
+  params: ListPortalInvoicesParams,
+  token: string,
+): Promise<ListPortalInvoicesResponse> {
+  const qs = buildInvoicesQueryString(params);
+  return apiFetch<ListPortalInvoicesResponse>(`/api/portal/invoices${qs ? `?${qs}` : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getPortalInvoice(id: string, token: string): Promise<PortalInvoiceDetail> {
+  return apiFetch<PortalInvoiceDetail>(`/api/portal/invoices/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

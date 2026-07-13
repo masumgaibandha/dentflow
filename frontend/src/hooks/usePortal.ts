@@ -3,8 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getPortalAppointments,
+  getPortalInvoice,
+  getPortalInvoices,
   getPortalMe,
   type ListPortalAppointmentsParams,
+  type ListPortalInvoicesParams,
 } from "@/lib/api/portalApi";
 import { getToken } from "@/lib/auth/token";
 
@@ -35,5 +38,22 @@ export function usePortalAppointments(params: ListPortalAppointmentsParams) {
     queryFn: () => getPortalAppointments(params, requireToken()),
     enabled: Boolean(getToken()),
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function usePortalInvoicesList(params: ListPortalInvoicesParams) {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "invoices", "list", params],
+    queryFn: () => getPortalInvoices(params, requireToken()),
+    enabled: Boolean(getToken()),
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function usePortalInvoice(id: string) {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "invoices", "detail", id],
+    queryFn: () => getPortalInvoice(id, requireToken()),
+    enabled: Boolean(getToken()) && Boolean(id),
   });
 }
