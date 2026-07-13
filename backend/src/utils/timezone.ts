@@ -1,3 +1,5 @@
+import type { Weekday } from "../models/Clinic";
+
 // Timezone rule for all dashboard date-boundary calculations: use the
 // clinic's own IANA timezone when it has one set (see /api/clinics/me),
 // otherwise fall back to this documented default - never a hardcoded
@@ -110,4 +112,42 @@ function applyTimezoneOffset(naiveUtc: Date, referenceInstant: Date, timeZone: s
   const asUtcWallClock = new Date(referenceInstant.toLocaleString("en-US", { timeZone: "UTC" }));
   const offsetMs = asTimezoneWallClock.getTime() - asUtcWallClock.getTime();
   return new Date(naiveUtc.getTime() - offsetMs);
+}
+
+/**
+ * Converts a clinic-local calendar date ("YYYY-MM-DD") and wall-clock time
+ * ("HH:mm") into the absolute UTC instant they represent in `timeZone`,
+ * reusing the same Intl-based offset technique as getDayRange/getMonthRange
+ * above - no external timezone library needed, and correct across DST
+ * transitions because the offset is sampled at the specific instant being
+ * converted (via the naive value itself as the reference), not at "now".
+ */
+export function zonedDateTimeToUtc(dateStr: string, timeStr: string, timeZone: string): Date {
+  const naiveUtc = new Date(`${dateStr}T${timeStr}:00.000Z`);
+  return applyTimezoneOffset(naiveUtc, naiveUtc, timeZone);
+}
+
+/**
+ * Returns the day-of-week key (WEEKDAYS in models/Clinic.ts) for a plain
+ * "YYYY-MM-DD" calendar date string. Deliberately timezone-independent: the
+ * string already represents a specific clinic-local calendar date, so it is
+ * parsed as if it were UTC purely to extract the weekday - no conversion.
+ */
+const WEEKDAY_BY_UTC_DAY: Weekday[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+export function weekdayOfDateString(dateStr: string): Weekday {
+  const utcDay = new Date(`${dateStr}T00:00:00.000Z`).getUTCDay();
+  const weekday = WEEKDAY_BY_UTC_DAY[utcDay];
+  if (!weekday) {
+    throw new Error(`Unexpected getUTCDay() value: ${utcDay}`);
+  }
+  return weekday;
 }

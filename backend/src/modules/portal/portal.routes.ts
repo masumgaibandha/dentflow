@@ -6,6 +6,7 @@ import {
   createAppointment,
   createPaymentIntent,
   getAppointments,
+  getAvailableSlots,
   getDentists,
   getInvoice,
   getMe,
@@ -22,6 +23,7 @@ portalRouter.get("/me", getMe);
 portalRouter.get("/dentists", getDentists);
 portalRouter.get("/treatments", getTreatments);
 portalRouter.get("/appointments", getAppointments);
+portalRouter.get("/available-slots", getAvailableSlots);
 portalRouter.post("/appointments", createAppointment);
 portalRouter.patch("/appointments/:id/cancel", cancelAppointment);
 portalRouter.get("/invoices", listInvoices);

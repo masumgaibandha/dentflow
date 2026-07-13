@@ -6,6 +6,7 @@ import {
   createPortalAppointment,
   createPortalInvoicePaymentIntent,
   getPortalAppointments,
+  getPortalAvailableSlots,
   getPortalDentists,
   getPortalInvoice,
   getPortalInvoices,
@@ -64,6 +65,17 @@ export function usePortalTreatments() {
   });
 }
 
+// Only fetched once dentist, treatment, and date are all chosen - the query
+// key includes all three so switching any one of them fetches a fresh list
+// rather than reusing a stale cached result for the old combination.
+export function usePortalAvailableSlots(dentistId: string, treatmentId: string, date: string) {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "available-slots", dentistId, treatmentId, date],
+    queryFn: () => getPortalAvailableSlots({ dentistId, treatmentId, date }, requireToken()),
+    enabled: Boolean(getToken()) && Boolean(dentistId) && Boolean(treatmentId) && Boolean(date),
+  });
+}
+
 export function useCreatePortalAppointment() {
   const queryClient = useQueryClient();
 
@@ -77,6 +89,7 @@ export function useCreatePortalAppointment() {
     }) => createPortalAppointment(input, idempotencyKey, requireToken()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "appointments"] });
+      queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "available-slots"] });
     },
   });
 }
@@ -88,6 +101,7 @@ export function useCancelPortalAppointment() {
     mutationFn: (id: string) => cancelPortalAppointment(id, requireToken()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "appointments"] });
+      queryClient.invalidateQueries({ queryKey: [PORTAL_KEY, "available-slots"] });
     },
   });
 }

@@ -11,6 +11,9 @@ function toClinicDto(clinic: ClinicDocument) {
     phone: clinic.phone,
     email: clinic.email,
     timezone: clinic.timezone,
+    // Absent (undefined) when never configured - the frontend uses this to
+    // show a "hours not configured" state rather than assuming a default.
+    weeklyHours: clinic.weeklyHours,
     createdAt: clinic.createdAt,
     updatedAt: clinic.updatedAt,
   };

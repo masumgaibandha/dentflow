@@ -91,3 +91,15 @@ export const createPortalAppointmentSchema = z
   });
 
 export type CreatePortalAppointmentInput = z.infer<typeof createPortalAppointmentSchema>;
+
+// .strict() rejects any query param beyond these three - in particular no
+// clinicId/patientId, and no free-form time range.
+export const availableSlotsQuerySchema = z
+  .object({
+    dentistId: objectIdSchema,
+    treatmentId: objectIdSchema,
+    date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be in YYYY-MM-DD format"),
+  })
+  .strict();
+
+export type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>;

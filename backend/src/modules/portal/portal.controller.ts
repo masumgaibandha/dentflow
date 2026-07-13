@@ -6,6 +6,7 @@ import {
   createInvoicePaymentIntent,
   createPortalAppointment,
   getPortalAppointments,
+  getPortalAvailableSlots,
   getPortalInvoiceById,
   getPortalMe,
   listPortalDentists,
@@ -15,6 +16,7 @@ import {
 } from "./portal.service";
 import {
   appointmentIdParamSchema,
+  availableSlotsQuerySchema,
   createPortalAppointmentSchema,
   invoiceIdParamSchema,
   listPortalInvoicesQuerySchema,
@@ -132,6 +134,16 @@ export const getTreatments = asyncHandler(async (req: Request, res: Response) =>
   }
 
   const result = await listPortalTreatments(req.user!.clinicId, parsed.data);
+  res.json(result);
+});
+
+export const getAvailableSlots = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = availableSlotsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new ApiError(400, parsed.error.issues[0]?.message ?? "Invalid query", "VALIDATION_ERROR");
+  }
+
+  const result = await getPortalAvailableSlots(req.user!.clinicId, parsed.data);
   res.json(result);
 });
 

@@ -55,6 +55,18 @@ appointmentSchema.index(
   { clinicId: 1, patientId: 1, idempotencyKey: 1 },
   { unique: true, partialFilterExpression: { idempotencyKey: { $exists: true } } },
 );
+// Concurrency mitigation for two different patients racing to book the same
+// dentist at the exact same startTime (the realistic race: both looking at
+// the same available-slots response and tapping the same slot button).
+// Scoped to status:"scheduled" only (a Mongo partial-index filter can't
+// express $ne, and "scheduled" is exactly the status a new booking is
+// created with, so this is the right equality filter for the purpose).
+// This narrows, but does not eliminate, the general overlap race - see
+// portal.service.ts's createPortalAppointment for the documented residual gap.
+appointmentSchema.index(
+  { clinicId: 1, dentistId: 1, startTime: 1 },
+  { unique: true, partialFilterExpression: { status: "scheduled" } },
+);
 
 export const Appointment =
   (models.Appointment as Model<AppointmentDocument>) ||

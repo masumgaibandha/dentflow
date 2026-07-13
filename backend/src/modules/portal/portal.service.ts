@@ -14,7 +14,14 @@ import {
 import { Treatment, type TreatmentDocument } from "../../models/Treatment";
 import { User } from "../../models/User";
 import { ApiError } from "../../utils/ApiError";
+import {
+  isValidTimezone,
+  toTimezoneDateString,
+  weekdayOfDateString,
+  zonedDateTimeToUtc,
+} from "../../utils/timezone";
 import type {
+  AvailableSlotsQuery,
   CreatePortalAppointmentInput,
   ListPortalInvoicesQuery,
   PortalAppointmentsQuery,
@@ -226,6 +233,166 @@ function isDuplicateKeyError(error: unknown): boolean {
   );
 }
 
+// Field names of the unique index a Mongo duplicate-key error (E11000)
+// violated, or null if `error` isn't one. Lets the two indexes on Appointment
+// (idempotencyKey vs. the dentist+startTime slot lock) be told apart instead
+// of treating every duplicate-key error the same way.
+function duplicateKeyIndexFields(error: unknown): string[] | null {
+  if (!isDuplicateKeyError(error) || !error || typeof error !== "object" || !("keyPattern" in error)) {
+    return null;
+  }
+  const keyPattern = (error as { keyPattern?: unknown }).keyPattern;
+  if (!keyPattern || typeof keyPattern !== "object") {
+    return null;
+  }
+  return Object.keys(keyPattern);
+}
+
+const SLOT_INTERVAL_MINUTES = 15;
+const SLOT_INTERVAL_MS = SLOT_INTERVAL_MINUTES * 60_000;
+
+interface CandidateSlot {
+  startTime: Date;
+  endTime: Date;
+}
+
+// Starts a candidate exactly at opening and steps by the fixed 15-minute
+// grid; a candidate is only included while its full duration still fits at
+// or before closing (both boundary cases - starting at open, ending at
+// close - are allowed because the loop condition is <=, not <).
+function generateCandidateSlots(openUtc: Date, closeUtc: Date, durationMs: number): CandidateSlot[] {
+  const slots: CandidateSlot[] = [];
+  for (
+    let start = openUtc.getTime();
+    start + durationMs <= closeUtc.getTime();
+    start += SLOT_INTERVAL_MS
+  ) {
+    slots.push({ startTime: new Date(start), endTime: new Date(start + durationMs) });
+  }
+  return slots;
+}
+
+function slotOverlapsAny(
+  slot: CandidateSlot,
+  conflicts: { startTime: Date; endTime: Date }[],
+): boolean {
+  return conflicts.some(
+    (conflict) =>
+      conflict.startTime.getTime() < slot.endTime.getTime() &&
+      conflict.endTime.getTime() > slot.startTime.getTime(),
+  );
+}
+
+// Shared by both the available-slots endpoint and booking creation, so the
+// two paths can never disagree about which clinic/dentist/treatment
+// combination is bookable. Every check here mirrors an explicit requirement:
+// clinic timezone configured+valid, weekly hours configured, dentist/
+// treatment belong to this clinic, and are active (isActive:true or the
+// field simply absent on a legacy record - never isActive:false).
+async function resolveBookingContext(clinicId: string, dentistId: string, treatmentId: string) {
+  const clinic = await Clinic.findById(clinicId);
+  if (!clinic) {
+    throw new ApiError(500, "Clinic record missing for user", "DATA_INTEGRITY_ERROR");
+  }
+  if (!clinic.timezone || !isValidTimezone(clinic.timezone)) {
+    throw new ApiError(409, "Clinic timezone is not configured", "CLINIC_TIMEZONE_NOT_CONFIGURED");
+  }
+  if (!clinic.weeklyHours) {
+    throw new ApiError(
+      409,
+      "Clinic operating hours are not configured",
+      "CLINIC_HOURS_NOT_CONFIGURED",
+    );
+  }
+
+  const dentist = await Dentist.findById(dentistId);
+  if (!dentist || dentist.clinicId.toString() !== clinicId) {
+    throw new ApiError(404, "Dentist not found", "NOT_FOUND");
+  }
+  if (!dentist.isActive) {
+    throw new ApiError(
+      400,
+      "This dentist is not currently accepting bookings",
+      "DENTIST_INACTIVE",
+    );
+  }
+
+  const treatment = await Treatment.findById(treatmentId);
+  if (!treatment || treatment.clinicId.toString() !== clinicId) {
+    throw new ApiError(404, "Treatment not found", "NOT_FOUND");
+  }
+  if (!treatment.isActive) {
+    throw new ApiError(400, "This treatment is not currently available", "TREATMENT_INACTIVE");
+  }
+  if (!Number.isInteger(treatment.durationMinutes) || treatment.durationMinutes <= 0) {
+    throw new ApiError(500, "Treatment has an invalid duration", "DATA_INTEGRITY_ERROR");
+  }
+
+  return { clinic, treatment };
+}
+
+export async function getPortalAvailableSlots(clinicId: string, query: AvailableSlotsQuery) {
+  const { clinic, treatment } = await resolveBookingContext(
+    clinicId,
+    query.dentistId,
+    query.treatmentId,
+  );
+  const timezone = clinic.timezone!;
+  const weeklyHours = clinic.weeklyHours!;
+
+  // isClosed is a small, safe addition beyond the milestone's example DTO -
+  // needed so the frontend can distinguish "clinic is closed this day" from
+  // "clinic is open but every slot is booked", which an empty slots array
+  // alone can't express and both are required as distinct UI states.
+  const responseBase = {
+    date: query.date,
+    timezone,
+    slotIntervalMinutes: SLOT_INTERVAL_MINUTES,
+    treatmentDurationMinutes: treatment.durationMinutes,
+  };
+
+  // A date entirely before "today" in clinic-local time is never bookable -
+  // returned as an empty list rather than an error, same as a closed day.
+  const todayInClinic = toTimezoneDateString(new Date(), timezone);
+  if (query.date < todayInClinic) {
+    return { ...responseBase, isClosed: false, slots: [] };
+  }
+
+  const dayHours = weeklyHours[weekdayOfDateString(query.date)];
+  if (dayHours.isClosed) {
+    return { ...responseBase, isClosed: true, slots: [] };
+  }
+
+  const openUtc = zonedDateTimeToUtc(query.date, dayHours.openTime!, timezone);
+  const closeUtc = zonedDateTimeToUtc(query.date, dayHours.closeTime!, timezone);
+  const durationMs = treatment.durationMinutes * 60_000;
+  const candidates = generateCandidateSlots(openUtc, closeUtc, durationMs);
+
+  // Single clinic-scoped query covering the whole opening range - including
+  // an appointment that started before opening but extends into it - never
+  // a broad fetch-everything-then-filter-in-memory pass.
+  const conflicts = await Appointment.find({
+    clinicId,
+    dentistId: query.dentistId,
+    status: { $ne: "cancelled" },
+    startTime: { $lt: closeUtc },
+    endTime: { $gt: openUtc },
+  })
+    .select("startTime endTime")
+    .lean();
+
+  const now = Date.now();
+  const slots = candidates
+    .filter((slot) => slot.startTime.getTime() > now)
+    .filter((slot) => !slotOverlapsAny(slot, conflicts))
+    .map((slot) => ({
+      startTime: slot.startTime.toISOString(),
+      endTime: slot.endTime.toISOString(),
+    }));
+
+  return { ...responseBase, isClosed: false, slots };
+}
+
 export async function createPortalAppointment(
   clinicId: string,
   patientId: string,
@@ -240,34 +407,44 @@ export async function createPortalAppointment(
     return getPortalAppointmentDto(existing._id.toString(), clinicId);
   }
 
-  const dentist = await Dentist.findById(input.dentistId);
-  if (!dentist || dentist.clinicId.toString() !== clinicId) {
-    throw new ApiError(404, "Dentist not found", "NOT_FOUND");
-  }
-  if (!dentist.isActive) {
-    throw new ApiError(
-      400,
-      "This dentist is not currently accepting bookings",
-      "DENTIST_INACTIVE",
-    );
-  }
-
-  const treatment = await Treatment.findById(input.treatmentId);
-  if (!treatment || treatment.clinicId.toString() !== clinicId) {
-    throw new ApiError(404, "Treatment not found", "NOT_FOUND");
-  }
-  if (!treatment.isActive) {
-    throw new ApiError(400, "This treatment is not currently available", "TREATMENT_INACTIVE");
-  }
-  if (!(treatment.durationMinutes > 0)) {
-    throw new ApiError(500, "Treatment has an invalid duration", "DATA_INTEGRITY_ERROR");
-  }
+  // The available-slots endpoint is a convenience, not the security boundary
+  // - every one of these checks (clinic hours, timezone, dentist/treatment
+  // ownership and active state) is independently re-verified here.
+  const { clinic, treatment } = await resolveBookingContext(
+    clinicId,
+    input.dentistId,
+    input.treatmentId,
+  );
+  const timezone = clinic.timezone!;
+  const weeklyHours = clinic.weeklyHours!;
 
   const startTime = input.startTime;
   const endTime = new Date(startTime.getTime() + treatment.durationMinutes * 60_000);
 
-  // No dentist working-hours/clinic-opening-hours validation exists in this
-  // milestone - any future non-overlapping time can technically be booked.
+  const clinicLocalDate = toTimezoneDateString(startTime, timezone);
+  const dayHours = weeklyHours[weekdayOfDateString(clinicLocalDate)];
+  if (dayHours.isClosed) {
+    throw new ApiError(400, "Clinic is closed on the selected day", "CLINIC_CLOSED_DAY");
+  }
+
+  const openUtc = zonedDateTimeToUtc(clinicLocalDate, dayHours.openTime!, timezone);
+  const closeUtc = zonedDateTimeToUtc(clinicLocalDate, dayHours.closeTime!, timezone);
+
+  // Covers "starts before opening", "ends after closing", and "crosses into
+  // another clinic-local day" all at once: open/close are both anchored to
+  // the single calendar day startTime falls on, so anything spilling outside
+  // that day's [openUtc, closeUtc] range fails one of these two comparisons.
+  if (startTime.getTime() < openUtc.getTime() || endTime.getTime() > closeUtc.getTime()) {
+    throw new ApiError(400, "Selected time is outside clinic hours", "OUTSIDE_CLINIC_HOURS");
+  }
+  if ((startTime.getTime() - openUtc.getTime()) % SLOT_INTERVAL_MS !== 0) {
+    throw new ApiError(
+      400,
+      "Selected time is not a valid appointment slot",
+      "SLOT_NOT_ALIGNED",
+    );
+  }
+
   // Overlap is checked for both the dentist and the patient, using the same
   // centralized comparison the admin module uses, so the two booking paths
   // can never disagree on what counts as a conflict.
@@ -312,16 +489,39 @@ export async function createPortalAppointment(
       idempotencyKey,
     });
   } catch (error) {
-    // A concurrent duplicate submission with the same idempotency key lost
-    // the create race - the unique index caught it server-side. Treat this
-    // exactly like the idempotent-replay path above rather than surfacing a
-    // raw duplicate-key error.
-    if (isDuplicateKeyError(error)) {
+    const violatedFields = duplicateKeyIndexFields(error);
+
+    // Same idempotency key lost the create race - the unique index caught
+    // it server-side. Treat this exactly like the idempotent-replay path
+    // above rather than surfacing a raw duplicate-key error.
+    if (violatedFields?.includes("idempotencyKey")) {
       const winner = await Appointment.findOne({ clinicId, patientId, idempotencyKey });
       if (winner) {
         return getPortalAppointmentDto(winner._id.toString(), clinicId);
       }
     }
+
+    // Two different patients raced for the exact same dentist+time slot and
+    // this request lost - the partial unique index on
+    // {clinicId, dentistId, startTime} (scoped to status: "scheduled")
+    // caught it. This is the one concurrency case the overlap pre-check
+    // above cannot fully close by itself (a classic check-then-act gap): two
+    // requests can both pass the overlap query before either has inserted.
+    // The index closes it for the common case - both requests targeting the
+    // identical slot - which is what actually happens when two patients tap
+    // the same displayed slot button. It does NOT close every theoretically
+    // possible overlapping-but-different-startTime race (e.g. 9:00-9:30 vs.
+    // a concurrent 9:15-9:45); closing that fully would need a bigger change
+    // (e.g. serializable transactions around the whole read-then-write) that
+    // is out of scope for this milestone. Documented as a known limitation.
+    if (violatedFields?.includes("dentistId") && violatedFields?.includes("startTime")) {
+      throw new ApiError(
+        409,
+        "This time is no longer available - please choose another slot",
+        "SLOT_TAKEN",
+      );
+    }
+
     throw error;
   }
 

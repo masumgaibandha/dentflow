@@ -100,11 +100,43 @@ export function getPortalTreatments(token: string): Promise<ListPortalTreatments
   });
 }
 
+export interface AvailableSlot {
+  startTime: string;
+  endTime: string;
+}
+
+export interface AvailableSlotsResponse {
+  date: string;
+  timezone: string;
+  slotIntervalMinutes: number;
+  treatmentDurationMinutes: number;
+  // Distinguishes "clinic closed this day" from "open but fully booked" -
+  // both render as an empty `slots` array otherwise.
+  isClosed: boolean;
+  slots: AvailableSlot[];
+}
+
+export function getPortalAvailableSlots(
+  params: { dentistId: string; treatmentId: string; date: string },
+  token: string,
+): Promise<AvailableSlotsResponse> {
+  const query = new URLSearchParams({
+    dentistId: params.dentistId,
+    treatmentId: params.treatmentId,
+    date: params.date,
+  });
+  return apiFetch<AvailableSlotsResponse>(`/api/portal/available-slots?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export interface CreatePortalAppointmentInput {
   dentistId: string;
   treatmentId: string;
-  // Unambiguous ISO instant (e.g. via `new Date(...).toISOString()`) - never
-  // a bare local-time string, matching the existing admin appointment module.
+  // Unambiguous ISO instant taken verbatim from the slot the patient picked
+  // (an AvailableSlot.startTime returned by the available-slots endpoint) -
+  // never reconstructed client-side from separate date/time values, which
+  // would reintroduce timezone ambiguity.
   startTime: string;
 }
 
