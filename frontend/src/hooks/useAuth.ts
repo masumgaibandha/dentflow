@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchMe,
@@ -25,8 +26,12 @@ export function useLoginMutation() {
   return useMutation({
     mutationFn: (payload: LoginPayload) => login(payload),
     onSuccess: (data) => {
-      queryClient.removeQueries({ queryKey: ["treatments", "admin"] });
+      queryClient.removeQueries({
+        queryKey: ["treatments", "admin"],
+      });
+
       setToken(data.token);
+
       queryClient.setQueryData<MeResponse>(ME_QUERY_KEY, {
         user: data.user,
         clinic: data.clinic,
@@ -36,19 +41,36 @@ export function useLoginMutation() {
 }
 
 export function useMe() {
-  return useQuery({
+  const [tokenChecked, setTokenChecked] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    setHasToken(Boolean(getToken()));
+    setTokenChecked(true);
+  }, []);
+
+  const query = useQuery({
     queryKey: ME_QUERY_KEY,
     queryFn: () => {
       const token = getToken();
+
       if (!token) {
         throw new Error("No token");
       }
+
       return fetchMe(token);
     },
-    enabled: getToken() !== null,
+    enabled: tokenChecked && hasToken,
     retry: false,
     staleTime: 60_000,
   });
+
+  return {
+    ...query,
+
+    // Keep the initial server and browser render identical.
+    isLoading: !tokenChecked || query.isLoading,
+  };
 }
 
 export function useLogout() {
@@ -56,7 +78,13 @@ export function useLogout() {
 
   return () => {
     clearToken();
-    queryClient.removeQueries({ queryKey: ["treatments", "admin"] });
-    queryClient.removeQueries({ queryKey: ME_QUERY_KEY });
+
+    queryClient.removeQueries({
+      queryKey: ["treatments", "admin"],
+    });
+
+    queryClient.removeQueries({
+      queryKey: ME_QUERY_KEY,
+    });
   };
 }

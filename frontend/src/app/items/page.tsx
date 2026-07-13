@@ -1,7 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
 import { PublicTopBar } from "@/components/layout/PublicTopBar";
 import { TreatmentCard } from "@/components/treatments/TreatmentCard";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/components/treatments/TreatmentFilters";
 import { Pagination } from "@/components/ui/Pagination";
 import { TreatmentCardSkeleton } from "@/components/ui/Skeleton";
+import { useMe } from "@/hooks/useAuth";
 import { useTreatmentsList } from "@/hooks/useTreatments";
 
 const DEFAULT_FILTERS: TreatmentFiltersValue = {
@@ -23,9 +25,15 @@ const DEFAULT_FILTERS: TreatmentFiltersValue = {
 
 function ItemsExploreContent() {
   const searchParams = useSearchParams();
-  const clinicSlug = searchParams.get("clinic") ?? process.env.NEXT_PUBLIC_DEFAULT_CLINIC_SLUG;
+  const { data: me, isLoading: isMeLoading } = useMe();
 
-  const [filters, setFilters] = useState<TreatmentFiltersValue>(DEFAULT_FILTERS);
+  // URL clinic always has first priority.
+  // When no clinic exists in the URL, use the logged-in user's clinic.
+  const clinicFromUrl = searchParams.get("clinic")?.trim();
+  const clinicSlug = clinicFromUrl || me?.clinic.slug;
+
+  const [filters, setFilters] =
+    useState<TreatmentFiltersValue>(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);
 
   const queryParams = useMemo(
@@ -53,27 +61,37 @@ function ItemsExploreContent() {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <PublicTopBar />
+
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         <h1 className="text-2xl font-semibold">Our Dental Services</h1>
+
         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
           Browse our full range of treatments and pricing.
         </p>
 
-        <div className="mt-6">
-          <TreatmentFilters value={filters} onChange={handleFiltersChange} />
-        </div>
+        {clinicSlug && (
+          <div className="mt-6">
+            <TreatmentFilters value={filters} onChange={handleFiltersChange} />
+          </div>
+        )}
 
-        {!clinicSlug && (
+        {!clinicSlug && isMeLoading && (
+          <div className="mt-12 text-center text-zinc-500">
+            Loading clinic...
+          </div>
+        )}
+
+        {!clinicSlug && !isMeLoading && (
           <div className="mt-12 rounded-lg border border-amber-300 bg-amber-50 p-6 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            No clinic specified. Add <code>?clinic=your-slug</code> to the URL, or configure{" "}
-            <code>NEXT_PUBLIC_DEFAULT_CLINIC_SLUG</code>.
+            No clinic was specified. Open the public catalog using{" "}
+            <code>?clinic=your-clinic-slug</code>.
           </div>
         )}
 
         {clinicSlug && isLoading && (
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <TreatmentCardSkeleton key={i} />
+            {Array.from({ length: 8 }).map((_, index) => (
+              <TreatmentCardSkeleton key={index} />
             ))}
           </div>
         )}
@@ -83,6 +101,7 @@ function ItemsExploreContent() {
             <p className="text-zinc-600 dark:text-zinc-400">
               Something went wrong loading services.
             </p>
+
             <button
               type="button"
               onClick={() => refetch()}
@@ -93,24 +112,39 @@ function ItemsExploreContent() {
           </div>
         )}
 
-        {clinicSlug && !isLoading && !isError && data && data.data.length === 0 && (
-          <div className="mt-12 text-center text-zinc-500">No services match your filters.</div>
-        )}
-
-        {clinicSlug && !isLoading && !isError && data && data.data.length > 0 && (
-          <>
-            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {data.data.map((treatment) => (
-                <TreatmentCard key={treatment.id} treatment={treatment} clinicSlug={clinicSlug} />
-              ))}
+        {clinicSlug &&
+          !isLoading &&
+          !isError &&
+          data &&
+          data.data.length === 0 && (
+            <div className="mt-12 text-center text-zinc-500">
+              No services match your filters.
             </div>
-            <Pagination
-              page={data.pagination.page}
-              totalPages={data.pagination.totalPages}
-              onPageChange={setPage}
-            />
-          </>
-        )}
+          )}
+
+        {clinicSlug &&
+          !isLoading &&
+          !isError &&
+          data &&
+          data.data.length > 0 && (
+            <>
+              <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {data.data.map((treatment) => (
+                  <TreatmentCard
+                    key={treatment.id}
+                    treatment={treatment}
+                    clinicSlug={clinicSlug}
+                  />
+                ))}
+              </div>
+
+              <Pagination
+                page={data.pagination.page}
+                totalPages={data.pagination.totalPages}
+                onPageChange={setPage}
+              />
+            </>
+          )}
       </main>
     </div>
   );
