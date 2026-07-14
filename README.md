@@ -10,9 +10,14 @@ patients.
 
 ## Live Links
 
-- **Frontend:** Not deployed yet
-- **Backend API:** Not deployed yet
+- **Frontend:** https://dentflow-eight.vercel.app
+- **Backend API:** https://dentflow-api.vercel.app
+- **Backend health check:** https://dentflow-api.vercel.app/api/health
 - **GitHub repository:** https://github.com/masumgaibandha/dentflow
+
+Both applications are hosted on Vercel (two separate projects from this same monorepo:
+`dentflow` for the frontend, `dentflow-api` for the backend). The database remains
+MongoDB Atlas, and Stripe remains in test mode.
 
 ## Main Features
 
