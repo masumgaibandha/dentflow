@@ -4,13 +4,16 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function TreatmentCardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
       <Skeleton className="h-40 w-full rounded-none" />
-      <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-1 flex-col gap-2 p-4">
         <Skeleton className="h-3 w-1/4" />
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-3 w-full" />
-        <Skeleton className="mt-2 h-5 w-1/3" />
+      </div>
+      <div className="flex items-center justify-between gap-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-20" />
       </div>
     </div>
   );

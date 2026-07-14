@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import { TreatmentImage } from "@/components/treatments/TreatmentImage";
 import { useMe } from "@/hooks/useAuth";
 import { useTreatment } from "@/hooks/useTreatments";
 import { resolveClinicSlug } from "@/lib/publicClinic";
@@ -63,8 +64,7 @@ function ItemDetailContent() {
         {clinicSlug && !isLoading && !isError && treatment && (
           <article className="mt-6">
             <div className="h-64 w-full overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-              {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-supplied image URL */}
-              <img
+              <TreatmentImage
                 src={treatment.imageUrl}
                 alt={treatment.title}
                 className="h-full w-full object-cover"

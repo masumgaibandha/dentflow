@@ -1,3 +1,14 @@
+"use client";
+
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { DashboardChartDay } from "@/lib/api/dashboardApi";
 
 function formatCents(cents: number): string {
@@ -12,9 +23,31 @@ function formatDayLabel(dateStr: string): string {
   return date.toLocaleDateString(undefined, { weekday: "short", day: "numeric", timeZone: "UTC" });
 }
 
+interface RevenueChartDatum {
+  date: string;
+  label: string;
+  amountDollars: number;
+}
+
+function CustomTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: RevenueChartDatum }[];
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0].payload;
+  return (
+    <div className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+      <p className="font-medium text-zinc-900 dark:text-zinc-100">{datum.label}</p>
+      <p className="text-zinc-600 dark:text-zinc-400">${datum.amountDollars.toFixed(2)}</p>
+    </div>
+  );
+}
+
 export function RevenueChart({ label, days }: { label: string; days: DashboardChartDay[] }) {
   const total = days.reduce((sum, day) => sum + day.totalCents, 0);
-  const max = Math.max(...days.map((day) => day.totalCents), 0);
 
   if (total === 0) {
     return (
@@ -27,36 +60,47 @@ export function RevenueChart({ label, days }: { label: string; days: DashboardCh
     );
   }
 
+  const chartData: RevenueChartDatum[] = days.map((day) => ({
+    date: day.date,
+    label: formatDayLabel(day.date),
+    amountDollars: day.totalCents / 100,
+  }));
+
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</p>
+      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        {label} <span className="font-normal text-zinc-500">· Total {formatCents(total)}</span>
+      </p>
 
       <div
         role="img"
         aria-label={`${label}. Total ${formatCents(total)}. ${days
           .map((day) => `${formatDayLabel(day.date)}: ${formatCents(day.totalCents)}`)
           .join(", ")}.`}
-        className="mt-6 flex h-40 items-end justify-between gap-2"
+        className="mt-4 h-56 w-full"
       >
-        {days.map((day) => {
-          const heightPct = max > 0 ? Math.max((day.totalCents / max) * 100, day.totalCents > 0 ? 4 : 0) : 0;
-          return (
-            <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                {day.totalCents > 0 ? formatCents(day.totalCents) : ""}
-              </span>
-              <div className="flex h-28 w-full items-end">
-                <div
-                  className="w-full max-w-6 mx-auto rounded-t bg-blue-500 dark:bg-blue-400"
-                  style={{ height: `${heightPct}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                {formatDayLabel(day.date)}
-              </span>
-            </div>
-          );
-        })}
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-800" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={{ className: "stroke-zinc-300 dark:stroke-zinc-700" }}
+              className="fill-zinc-500 dark:fill-zinc-400"
+            />
+            <YAxis
+              tickFormatter={(value: number) => `$${value}`}
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              width={48}
+              className="fill-zinc-500 dark:fill-zinc-400"
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(59, 130, 246, 0.08)" }} />
+            <Bar dataKey="amountDollars" name="Paid revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={36} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Screen-reader-friendly data summary, mirroring the aria-label above as a real table. */}

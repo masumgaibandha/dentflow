@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Dental service illustration">
+  <defs>
+    <linearGradient id="dentflow-fallback-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#eff6ff"/>
+      <stop offset="100%" stop-color="#ecfdf5"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="16" fill="url(#dentflow-fallback-bg)"/>
+  <circle cx="200" cy="150" r="88" fill="#ffffff" opacity="0.6"/>
+  <path d="M200,95 C160,95 138,125 143,155 C146,175 153,195 158,220 C161,235 173,240 178,225 C181,215 186,210 200,210 C214,210 219,215 222,225 C227,240 239,235 242,220 C247,195 254,175 257,155 C262,125 240,95 200,95 Z"
+        fill="#ffffff" stroke="#2563eb" stroke-width="7"/>
+  <path d="M178,140 q22,-16 44,0" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="172" cy="128" r="4" fill="#2563eb"/>
+  <circle cx="228" cy="128" r="4" fill="#2563eb"/>
+  <g stroke="#059669" stroke-width="4" stroke-linecap="round">
+    <line x1="272" y1="95" x2="290" y2="80"/>
+    <line x1="285" y1="112" x2="304" y2="100"/>
+  </g>
+  <g stroke="#059669" stroke-width="4" stroke-linecap="round">
+    <line x1="128" y1="95" x2="110" y2="80"/>
+    <line x1="115" y1="112" x2="96" y2="100"/>
+  </g>
+</svg>
