@@ -55,32 +55,10 @@ export default function LoginPage() {
   return (
     <PublicLayout>
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
-        <h1 className="text-2xl font-semibold">Log in</h1>
+        <h1 className="text-2xl font-semibold">Welcome back</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in to your DentFlow dashboard.
+          Sign in to continue to your DentFlow account.
         </p>
-
-        <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
-          <p className="text-xs font-medium text-blue-900 dark:text-blue-200">
-            Try DentFlow instantly with a demo account
-          </p>
-          <p className="mt-1 text-xs text-blue-800 dark:text-blue-300">
-            These accounts contain demonstration data only - do not reuse them for a real clinic.
-          </p>
-          <div className="mt-3 flex flex-col gap-2">
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => fillDemoAccount(account.email, account.password)}
-                className="flex flex-col items-start rounded-md border border-blue-300 bg-white px-3 py-2 text-left text-xs hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-blue-800 dark:bg-zinc-900 dark:hover:bg-blue-900/40"
-              >
-                <span className="font-semibold text-blue-900 dark:text-blue-200">{account.label}</span>
-                <span className="text-zinc-600 dark:text-zinc-400">{account.description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         <form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-4">
           <FormField label="Email" error={errors.email?.message}>
@@ -103,6 +81,25 @@ export default function LoginPage() {
             {loginMutation.isPending ? "Logging in..." : "Log in"}
           </button>
         </form>
+
+        <div className="mt-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Demo access</p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Fill the form with a demonstration account.
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {DEMO_ACCOUNTS.map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                onClick={() => fillDemoAccount(account.email, account.password)}
+                className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-zinc-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              >
+                {account.role.charAt(0).toUpperCase() + account.role.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
           Don&apos;t have a clinic account yet?{" "}
