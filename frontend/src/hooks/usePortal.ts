@@ -11,11 +11,14 @@ import {
   getPortalInvoice,
   getPortalInvoices,
   getPortalMe,
+  getPortalMedicalRecord,
+  getPortalMedicalRecords,
   getPortalTreatments,
   verifyPortalInvoicePayment,
   type CreatePortalAppointmentInput,
   type ListPortalAppointmentsParams,
   type ListPortalInvoicesParams,
+  type ListPortalMedicalRecordsParams,
 } from "@/lib/api/portalApi";
 import { getToken } from "@/lib/auth/token";
 
@@ -130,6 +133,27 @@ export function usePortalInvoice(id: string) {
 export function useCreatePortalPaymentIntent() {
   return useMutation({
     mutationFn: (invoiceId: string) => createPortalInvoicePaymentIntent(invoiceId, requireToken()),
+  });
+}
+
+// Namespaced exactly as ["portal", "medical-records", "list"/"detail", ...] -
+// the staff visibility mutation's cache invalidation (see
+// useUpdateMedicalRecordVisibility in useMedicalRecords.ts) targets this same
+// ["portal", "medical-records"] prefix.
+export function usePortalMedicalRecordsList(params: ListPortalMedicalRecordsParams) {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "medical-records", "list", params],
+    queryFn: () => getPortalMedicalRecords(params, requireToken()),
+    enabled: Boolean(getToken()),
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function usePortalMedicalRecord(id: string) {
+  return useQuery({
+    queryKey: [PORTAL_KEY, "medical-records", "detail", id],
+    queryFn: () => getPortalMedicalRecord(id, requireToken()),
+    enabled: Boolean(getToken()) && Boolean(id),
   });
 }
 

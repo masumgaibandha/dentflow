@@ -42,6 +42,19 @@ export interface MedicalRecordDocument extends Document {
   // header - dedupes a double-click/retried amendment submission. Never set
   // on a plain create/update.
   idempotencyKey?: string;
+  // Clinic-controlled publication to the owning patient's portal. Defaults
+  // false, and a document where the field was never written (legacy record)
+  // must also read as not-visible - achieved for free by querying
+  // `patientVisible: true` directly rather than any $or-with-$exists
+  // fallback, since Mongo's query engine never treats a missing field as
+  // matching an exact `true` filter. Finalization does NOT set this - a
+  // newly finalized record stays hidden until a staff/admin explicitly
+  // publishes it (see medical-record.service.ts's updateMedicalRecordVisibility).
+  patientVisible: boolean;
+  patientVisibilityUpdatedAt?: Date;
+  // The authenticated admin/staff User who last changed patientVisible -
+  // always server-derived from req.user, never client-supplied.
+  patientVisibilityUpdatedByUserId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +92,9 @@ const medicalRecordSchema = new Schema<MedicalRecordDocument>(
       maxlength: MEDICAL_RECORD_AMENDMENT_REASON_MAX_LENGTH,
     },
     idempotencyKey: { type: String, trim: true },
+    patientVisible: { type: Boolean, default: false, required: true },
+    patientVisibilityUpdatedAt: { type: Date },
+    patientVisibilityUpdatedByUserId: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );
@@ -102,6 +118,18 @@ medicalRecordSchema.index(
   { clinicId: 1, amendedRecordId: 1, idempotencyKey: 1 },
   { unique: true, partialFilterExpression: { idempotencyKey: { $exists: true } } },
 );
+// Supports the patient-portal list/detail queries, which always filter on
+// this exact field combination (clinicId + patientId + status:"finalized" +
+// patientVisible:true, further narrowed to originals-only via amendedRecordId
+// absent, sorted by recordDate descending).
+medicalRecordSchema.index({
+  clinicId: 1,
+  patientId: 1,
+  status: 1,
+  patientVisible: 1,
+  amendedRecordId: 1,
+  recordDate: -1,
+});
 
 export const MedicalRecord =
   (models.MedicalRecord as Model<MedicalRecordDocument>) ||

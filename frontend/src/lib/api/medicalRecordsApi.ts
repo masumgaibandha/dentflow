@@ -45,6 +45,7 @@ export interface MedicalRecordListItem {
   status: MedicalRecordStatus;
   finalizedAt: string | null;
   isAmendment: boolean;
+  patientVisible: boolean;
   createdAt: string;
 }
 
@@ -54,6 +55,7 @@ export interface MedicalRecordAmendmentSummary {
   recordDate: string;
   amendmentReason: string | null;
   author: MedicalRecordAuthorRef;
+  patientVisible: boolean;
   createdAt: string;
 }
 
@@ -172,6 +174,18 @@ export function deleteMedicalRecord(id: string, token: string): Promise<void> {
 export function finalizeMedicalRecord(id: string, token: string): Promise<MedicalRecordDetail> {
   return apiFetch<MedicalRecordDetail>(`/api/medical-records/${id}/finalize`, {
     method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export function updateMedicalRecordVisibility(
+  id: string,
+  patientVisible: boolean,
+  token: string,
+): Promise<MedicalRecordDetail> {
+  return apiFetch<MedicalRecordDetail>(`/api/medical-records/${id}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ patientVisible }),
     headers: authHeaders(token),
   });
 }

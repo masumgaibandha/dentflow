@@ -9,6 +9,7 @@ import {
   getMedicalRecord,
   listMedicalRecords,
   updateMedicalRecord,
+  updateMedicalRecordVisibility,
   type CreateAmendmentInput,
   type ListMedicalRecordsParams,
   type MedicalRecordInput,
@@ -111,6 +112,27 @@ export function useFinalizeMedicalRecord() {
       await Promise.all([
         invalidatePatientRecords(queryClient, result.patient.id),
         queryClient.invalidateQueries({ queryKey: detailKey(result.id) }),
+      ]);
+    },
+  });
+}
+
+export function useUpdateMedicalRecordVisibility() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, patientVisible }: { id: string; patientVisible: boolean }) =>
+      updateMedicalRecordVisibility(id, patientVisible, requireToken()),
+    onSuccess: async (result) => {
+      await Promise.all([
+        // Staff-side detail + the patient's staff-side list.
+        queryClient.invalidateQueries({ queryKey: detailKey(result.id) }),
+        invalidatePatientRecords(queryClient, result.patient.id),
+        // The patient portal's own cache - a real cross-account effect only
+        // matters within the same browser tab/session (e.g. during account
+        // switching in dev/QA), but staying consistent with it is cheap and
+        // was explicitly requested.
+        queryClient.invalidateQueries({ queryKey: ["portal", "medical-records"] }),
       ]);
     },
   });

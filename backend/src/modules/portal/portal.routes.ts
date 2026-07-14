@@ -10,8 +10,10 @@ import {
   getDentists,
   getInvoice,
   getMe,
+  getMedicalRecord,
   getTreatments,
   listInvoices,
+  listMedicalRecords,
   verifyPayment,
 } from "./portal.controller";
 
@@ -30,3 +32,5 @@ portalRouter.get("/invoices", listInvoices);
 portalRouter.get("/invoices/:id", getInvoice);
 portalRouter.post("/invoices/:id/payment-intent", createPaymentIntent);
 portalRouter.post("/invoices/:id/verify-payment", verifyPayment);
+portalRouter.get("/medical-records", listMedicalRecords);
+portalRouter.get("/medical-records/:id", getMedicalRecord);

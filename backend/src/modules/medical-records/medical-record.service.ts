@@ -9,6 +9,7 @@ import type {
   CreateMedicalRecordInput,
   ListMedicalRecordsQuery,
   UpdateMedicalRecordInput,
+  UpdateMedicalRecordVisibilityInput,
 } from "./medical-record.validation";
 
 const PATIENT_POPULATE = { path: "patientId", select: "name clinicId" };
@@ -132,6 +133,10 @@ function toListItemDto(record: MedicalRecordDocument, clinicId: string) {
     status: record.status,
     finalizedAt: record.finalizedAt ?? null,
     isAmendment: Boolean(record.amendedRecordId),
+    // Staff-only visibility state - never present on the patient-facing
+    // portal DTOs (see portal.service.ts), which have no reason to know
+    // their own publication metadata.
+    patientVisible: record.patientVisible,
     createdAt: record.createdAt,
   };
 }
@@ -142,6 +147,7 @@ interface AmendmentSummary {
   recordDate: Date;
   amendmentReason: string | null;
   author: { name: string | null };
+  patientVisible: boolean;
   createdAt: Date;
 }
 
@@ -174,6 +180,7 @@ async function toDetailDto(record: MedicalRecordDocument, clinicId: string) {
       recordDate: amendment.recordDate,
       amendmentReason: amendment.amendmentReason ?? null,
       author: toAuthorRef(amendment, clinicId),
+      patientVisible: amendment.patientVisible,
       createdAt: amendment.createdAt,
     }));
   }
@@ -378,6 +385,53 @@ function isDuplicateKeyError(error: unknown): boolean {
     "code" in error &&
     (error as { code?: unknown }).code === 11000
   );
+}
+
+// Toggles patient-portal publication. Works identically for original records
+// and amendments - both are plain MedicalRecord documents, and this
+// deliberately does not special-case either (see the milestone's "originals
+// and amendments may have visibility controlled separately" requirement).
+// A single endpoint handles both publish and unpublish (the request body
+// simply carries the desired boolean) rather than two separate routes.
+export async function updateMedicalRecordVisibility(
+  id: string,
+  clinicId: string,
+  userId: string,
+  input: UpdateMedicalRecordVisibilityInput,
+) {
+  // Tenant-scoped atomic conditional update - status:"finalized" is part of
+  // the same filter as the id/clinic scope, so a draft can never match this
+  // update (a draft can never be patient-visible). Naturally idempotent:
+  // calling this repeatedly with the same value just re-applies the same
+  // $set and re-succeeds, no special-case needed. This single $set only ever
+  // touches patientVisible + its own audit fields, so clinical content,
+  // amendment relationships, and finalized state can never be affected by a
+  // visibility change.
+  const updated = await MedicalRecord.findOneAndUpdate(
+    { _id: id, clinicId, status: "finalized" },
+    {
+      $set: {
+        patientVisible: input.patientVisible,
+        patientVisibilityUpdatedAt: new Date(),
+        patientVisibilityUpdatedByUserId: userId,
+      },
+    },
+    { new: true },
+  );
+
+  if (!updated) {
+    const stillExists = await MedicalRecord.exists({ _id: id, clinicId });
+    if (stillExists) {
+      throw new ApiError(
+        409,
+        "Only a finalized medical record can have its patient visibility changed",
+        "MEDICAL_RECORD_NOT_FINALIZED",
+      );
+    }
+    throw new ApiError(404, "Medical record not found", "NOT_FOUND");
+  }
+
+  return getMedicalRecordById(id, clinicId);
 }
 
 export async function createAmendment(

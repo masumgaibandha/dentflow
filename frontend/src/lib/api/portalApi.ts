@@ -248,3 +248,81 @@ export function verifyPortalInvoicePayment(
     body: JSON.stringify({ paymentIntentId }),
   });
 }
+
+export type PortalMedicalRecordType =
+  | "consultation"
+  | "diagnosis"
+  | "procedure_note"
+  | "follow_up"
+  | "other";
+
+// Dedicated, deliberately lean patient-facing shapes - never the staff
+// MedicalRecordListItem/Detail types from medicalRecordsApi.ts. No status,
+// no author, no clinicId/patientId/appointmentId, no visibility metadata -
+// a patient response is its own type, not a stripped-down staff one.
+export interface PortalMedicalRecordListItem {
+  id: string;
+  recordType: PortalMedicalRecordType;
+  title: string;
+  recordDate: string;
+  attendingDentist: { name: string } | null;
+  hasVisibleAmendments: boolean;
+  createdAt: string;
+}
+
+export interface PortalMedicalRecordAmendment {
+  id: string;
+  title: string;
+  description: string;
+  amendmentReason: string | null;
+  recordDate: string;
+  createdAt: string;
+}
+
+export interface PortalMedicalRecordDetail {
+  id: string;
+  recordType: PortalMedicalRecordType;
+  title: string;
+  description: string;
+  recordDate: string;
+  attendingDentist: { name: string } | null;
+  amendments: PortalMedicalRecordAmendment[];
+  createdAt: string;
+}
+
+export interface ListPortalMedicalRecordsResponse {
+  data: PortalMedicalRecordListItem[];
+  pagination: Pagination;
+}
+
+export interface ListPortalMedicalRecordsParams {
+  recordType?: PortalMedicalRecordType;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+function buildMedicalRecordsQueryString(params: ListPortalMedicalRecordsParams): string {
+  const query = new URLSearchParams();
+  if (params.recordType) query.set("recordType", params.recordType);
+  if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  return query.toString();
+}
+
+export function getPortalMedicalRecords(
+  params: ListPortalMedicalRecordsParams,
+  token: string,
+): Promise<ListPortalMedicalRecordsResponse> {
+  const qs = buildMedicalRecordsQueryString(params);
+  return apiFetch<ListPortalMedicalRecordsResponse>(`/api/portal/medical-records${qs ? `?${qs}` : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getPortalMedicalRecord(id: string, token: string): Promise<PortalMedicalRecordDetail> {
+  return apiFetch<PortalMedicalRecordDetail>(`/api/portal/medical-records/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

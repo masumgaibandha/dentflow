@@ -9,6 +9,7 @@ import {
   getMedicalRecordById,
   listMedicalRecords,
   updateMedicalRecord,
+  updateMedicalRecordVisibility,
 } from "./medical-record.service";
 import {
   createAmendmentSchema,
@@ -16,6 +17,7 @@ import {
   listMedicalRecordsQuerySchema,
   medicalRecordIdParamSchema,
   updateMedicalRecordSchema,
+  updateMedicalRecordVisibilitySchema,
 } from "./medical-record.validation";
 
 function parseId(req: Request): string {
@@ -85,6 +87,21 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
 export const finalize = asyncHandler(async (req: Request, res: Response) => {
   const id = parseId(req);
   const result = await finalizeMedicalRecord(id, req.user!.clinicId);
+  res.json(result);
+});
+
+export const updateVisibility = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseId(req);
+  const parsed = updateMedicalRecordVisibilitySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ApiError(
+      400,
+      parsed.error.issues[0]?.message ?? "Invalid input",
+      "VALIDATION_ERROR",
+    );
+  }
+
+  const result = await updateMedicalRecordVisibility(id, req.user!.clinicId, req.user!.userId, parsed.data);
   res.json(result);
 });
 

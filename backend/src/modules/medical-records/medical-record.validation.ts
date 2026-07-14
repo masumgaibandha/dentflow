@@ -100,3 +100,15 @@ export const listMedicalRecordsQuerySchema = z
   .strict();
 
 export type ListMedicalRecordsQuery = z.infer<typeof listMedicalRecordsQuerySchema>;
+
+// .strict() so a client cannot smuggle patientVisibilityUpdatedAt/
+// patientVisibilityUpdatedByUserId, or anything else, alongside the flag -
+// those are always server-derived (see updateMedicalRecordVisibility in
+// medical-record.service.ts).
+export const updateMedicalRecordVisibilitySchema = z
+  .object({
+    patientVisible: z.boolean(),
+  })
+  .strict();
+
+export type UpdateMedicalRecordVisibilityInput = z.infer<typeof updateMedicalRecordVisibilitySchema>;

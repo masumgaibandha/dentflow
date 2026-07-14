@@ -1,3 +1,4 @@
+import { PublishToPatientButton } from "@/components/medical-records/PublishToPatientButton";
 import type { MedicalRecordDetail, MedicalRecordType } from "@/lib/api/medicalRecordsApi";
 
 const RECORD_TYPE_LABELS: Record<MedicalRecordType, string> = {
@@ -19,6 +20,20 @@ function StatusBadge({ status }: { status: "draft" | "finalized" }) {
       }`}
     >
       {isDraft ? "Draft" : "Finalized"}
+    </span>
+  );
+}
+
+function VisibilityBadge({ patientVisible }: { patientVisible: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+        patientVisible
+          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+          : "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+      }`}
+    >
+      {patientVisible ? "Visible to patient" : "Hidden from patient"}
     </span>
   );
 }
@@ -95,6 +110,27 @@ export function MedicalRecordDetails({
         </dd>
       </div>
 
+      <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Patient portal visibility</span>
+            {record.status === "finalized" && <VisibilityBadge patientVisible={record.patientVisible} />}
+          </div>
+          {record.status === "finalized" ? (
+            <PublishToPatientButton recordId={record.id} patientVisible={record.patientVisible} />
+          ) : (
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">Finalize before publishing</span>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          {record.status === "draft"
+            ? "A draft can never be visible to the patient. Finalize this record first, then choose whether to publish it."
+            : record.isAmendment
+              ? "Publishing this amendment exposes its title and full correction text to the patient - but it will only actually appear in their portal while the original record is also visible."
+              : "Publishing exposes this record's title and full description to the patient. Publishing an original does not automatically publish its amendments - each is controlled separately."}
+        </p>
+      </div>
+
       {!record.isAmendment && (
         <div>
           <h4 className="text-sm font-medium">Amendments {record.amendments.length > 0 ? `(${record.amendments.length})` : ""}</h4>
@@ -120,14 +156,32 @@ export function MedicalRecordDetails({
                       Reason: {amendment.amendmentReason}
                     </p>
                   )}
-                  {onViewAmendment && (
-                    <button
-                      type="button"
-                      onClick={() => onViewAmendment(amendment.id)}
-                      className="mt-2 text-xs font-medium text-zinc-700 hover:underline dark:text-zinc-300"
-                    >
-                      View full amendment
-                    </button>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <VisibilityBadge patientVisible={amendment.patientVisible} />
+                    <PublishToPatientButton
+                      recordId={amendment.id}
+                      patientVisible={amendment.patientVisible}
+                      className={`rounded-md border px-2 py-0.5 text-xs font-medium ${
+                        amendment.patientVisible
+                          ? "border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                          : "border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-900 dark:text-purple-300 dark:hover:bg-purple-950"
+                      }`}
+                    />
+                    {onViewAmendment && (
+                      <button
+                        type="button"
+                        onClick={() => onViewAmendment(amendment.id)}
+                        className="text-xs font-medium text-zinc-700 hover:underline dark:text-zinc-300"
+                      >
+                        View full amendment
+                      </button>
+                    )}
+                  </div>
+                  {!record.patientVisible && amendment.patientVisible && (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                      This amendment is published, but won&apos;t appear to the patient until the original
+                      record is also published.
+                    </p>
                   )}
                 </li>
               ))}

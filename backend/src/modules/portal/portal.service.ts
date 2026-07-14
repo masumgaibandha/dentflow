@@ -6,6 +6,7 @@ import { Clinic } from "../../models/Clinic";
 import { getStripeClient, STRIPE_CURRENCY } from "../../config/stripe";
 import { Dentist, type DentistDocument } from "../../models/Dentist";
 import { Invoice, type InvoiceDocument } from "../../models/Invoice";
+import { MedicalRecord, type MedicalRecordDocument } from "../../models/MedicalRecord";
 import { Patient } from "../../models/Patient";
 import {
   PaymentTransaction,
@@ -26,6 +27,7 @@ import type {
   ListPortalInvoicesQuery,
   PortalAppointmentsQuery,
   PortalDentistsQuery,
+  PortalMedicalRecordsQuery,
   PortalTreatmentsQuery,
 } from "./portal.validation";
 
@@ -890,4 +892,152 @@ export async function verifyInvoicePayment(
   } finally {
     await session.endSession();
   }
+}
+
+const PORTAL_MEDICAL_RECORD_DENTIST_POPULATE = { path: "attendingDentistId", select: "name clinicId" };
+
+// Same defense-in-depth shape as toPortalAppointmentDto above: even if a
+// corrupted reference ever pointed at another clinic's Dentist, populate
+// would still fetch it - this check is what actually prevents that
+// document's name from being exposed.
+function toPortalDentistRef(record: MedicalRecordDocument, clinicId: string): { name: string } | null {
+  const dentist = record.attendingDentistId as unknown as
+    | { name: string; clinicId: { toString(): string } }
+    | undefined;
+  if (!dentist || dentist.clinicId.toString() !== clinicId) {
+    return null;
+  }
+  return { name: dentist.name };
+}
+
+function toPortalMedicalRecordListDto(
+  record: MedicalRecordDocument,
+  clinicId: string,
+  hasVisibleAmendments: boolean,
+) {
+  return {
+    id: record._id.toString(),
+    recordType: record.recordType,
+    title: record.title,
+    recordDate: record.recordDate,
+    attendingDentist: toPortalDentistRef(record, clinicId),
+    hasVisibleAmendments,
+    createdAt: record.createdAt,
+  };
+}
+
+// clinicId/patientId/appointmentId/authorUserId/patientVisibilityUpdatedByUserId/
+// amendedRecordId/idempotencyKey/version fields and any other internal or
+// staff-only metadata are deliberately never read onto this DTO at all - a
+// patient response is built field-by-field from source data, never by
+// stripping down the staff DTO.
+export async function listPortalMedicalRecords(
+  clinicId: string,
+  patientId: string,
+  query: PortalMedicalRecordsQuery,
+) {
+  // Original records only - an amendment document never appears as its own
+  // list row. clinicId and patientId come from the live, requireAuth-resolved
+  // User record, never a query parameter, so this filter can never be
+  // widened by the client.
+  const filter: FilterQuery<MedicalRecordDocument> = {
+    clinicId,
+    patientId,
+    status: "finalized",
+    patientVisible: true,
+    amendedRecordId: { $exists: false },
+  };
+  if (query.recordType) filter.recordType = query.recordType;
+
+  const direction: 1 | -1 = query.sortOrder === "asc" ? 1 : -1;
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    MedicalRecord.find(filter)
+      .select("-description")
+      .sort({ recordDate: direction })
+      .skip(skip)
+      .limit(query.limit)
+      .populate(PORTAL_MEDICAL_RECORD_DENTIST_POPULATE),
+    MedicalRecord.countDocuments(filter),
+  ]);
+
+  // Single batched query (not one-per-row) to learn which of this page's
+  // originals have at least one visible, finalized amendment - a hidden
+  // amendment, or an amendment of a hidden original, must never surface here.
+  const pageIds = items.map((item) => item._id);
+  const visibleAmendments = await MedicalRecord.find({
+    clinicId,
+    patientId,
+    status: "finalized",
+    patientVisible: true,
+    amendedRecordId: { $in: pageIds },
+  })
+    .select("amendedRecordId")
+    .lean();
+  const idsWithVisibleAmendments = new Set(
+    visibleAmendments.map((amendment) => amendment.amendedRecordId!.toString()),
+  );
+
+  return {
+    data: items.map((item) =>
+      toPortalMedicalRecordListDto(item, clinicId, idsWithVisibleAmendments.has(item._id.toString())),
+    ),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    },
+  };
+}
+
+export async function getPortalMedicalRecordById(clinicId: string, patientId: string, recordId: string) {
+  // A single ownership+visibility-scoped query, never findById-then-check.
+  // amendedRecordId: {$exists:false} means an amendment can never be reached
+  // through this endpoint by guessing its own id - only through its
+  // original's `amendments` list below. A hidden or draft record, another
+  // patient's record, or another clinic's record all 404 identically here,
+  // never confirming which condition failed.
+  const record = await MedicalRecord.findOne({
+    _id: recordId,
+    clinicId,
+    patientId,
+    status: "finalized",
+    patientVisible: true,
+    amendedRecordId: { $exists: false },
+  }).populate(PORTAL_MEDICAL_RECORD_DENTIST_POPULATE);
+
+  if (!record) {
+    throw new ApiError(404, "Medical record not found", "NOT_FOUND");
+  }
+
+  // Only visible, finalized amendments of this same patient's record are
+  // ever loaded - a hidden amendment must never appear here even though its
+  // (visible) original does.
+  const amendments = await MedicalRecord.find({
+    clinicId,
+    patientId,
+    amendedRecordId: record._id,
+    status: "finalized",
+    patientVisible: true,
+  }).sort({ createdAt: 1 });
+
+  return {
+    id: record._id.toString(),
+    recordType: record.recordType,
+    title: record.title,
+    description: record.description,
+    recordDate: record.recordDate,
+    attendingDentist: toPortalDentistRef(record, clinicId),
+    amendments: amendments.map((amendment) => ({
+      id: amendment._id.toString(),
+      title: amendment.title,
+      description: amendment.description,
+      amendmentReason: amendment.amendmentReason ?? null,
+      recordDate: amendment.recordDate,
+      createdAt: amendment.createdAt,
+    })),
+    createdAt: record.createdAt,
+  };
 }

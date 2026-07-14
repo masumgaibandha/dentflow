@@ -25,6 +25,22 @@ function StatusBadge({ status }: { status: "draft" | "finalized" }) {
   );
 }
 
+// Only ever shown for finalized records - a draft can never be
+// patient-visible, so there is nothing meaningful to badge for one.
+function VisibilityBadge({ patientVisible }: { patientVisible: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+        patientVisible
+          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+          : "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+      }`}
+    >
+      {patientVisible ? "Visible to patient" : "Hidden from patient"}
+    </span>
+  );
+}
+
 export function MedicalRecordList({
   records,
   isLoading,
@@ -80,7 +96,12 @@ export function MedicalRecordList({
                 <td className="p-3">{RECORD_TYPE_LABELS[record.recordType]}</td>
                 <td className="p-3">{new Date(record.recordDate).toLocaleDateString()}</td>
                 <td className="p-3">
-                  <StatusBadge status={record.status} />
+                  <div className="flex flex-wrap gap-1.5">
+                    <StatusBadge status={record.status} />
+                    {record.status === "finalized" && (
+                      <VisibilityBadge patientVisible={record.patientVisible} />
+                    )}
+                  </div>
                 </td>
                 <td className="p-3">
                   <div className="flex flex-wrap justify-end gap-2">

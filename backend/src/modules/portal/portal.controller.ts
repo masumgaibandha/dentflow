@@ -9,8 +9,10 @@ import {
   getPortalAvailableSlots,
   getPortalInvoiceById,
   getPortalMe,
+  getPortalMedicalRecordById,
   listPortalDentists,
   listPortalInvoices,
+  listPortalMedicalRecords,
   listPortalTreatments,
   verifyInvoicePayment,
 } from "./portal.service";
@@ -22,6 +24,8 @@ import {
   listPortalInvoicesQuerySchema,
   portalAppointmentsQuerySchema,
   portalDentistsQuerySchema,
+  portalMedicalRecordIdParamSchema,
+  portalMedicalRecordsQuerySchema,
   portalTreatmentsQuerySchema,
   verifyPaymentSchema,
 } from "./portal.validation";
@@ -172,6 +176,30 @@ export const createAppointment = asyncHandler(async (req: Request, res: Response
     idempotencyKey,
   );
   res.status(201).json(result);
+});
+
+export const listMedicalRecords = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = portalMedicalRecordsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new ApiError(400, parsed.error.issues[0]?.message ?? "Invalid query", "VALIDATION_ERROR");
+  }
+
+  const result = await listPortalMedicalRecords(req.user!.clinicId, req.user!.patientId!, parsed.data);
+  res.json(result);
+});
+
+export const getMedicalRecord = asyncHandler(async (req: Request, res: Response) => {
+  const parsedId = portalMedicalRecordIdParamSchema.safeParse(req.params.id);
+  if (!parsedId.success) {
+    throw new ApiError(
+      400,
+      parsedId.error.issues[0]?.message ?? "Invalid medical record id",
+      "VALIDATION_ERROR",
+    );
+  }
+
+  const result = await getPortalMedicalRecordById(req.user!.clinicId, req.user!.patientId!, parsedId.data);
+  res.json(result);
 });
 
 export const cancelAppointment = asyncHandler(async (req: Request, res: Response) => {

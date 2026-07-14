@@ -244,6 +244,11 @@ describe("medical records - role gating", () => {
           .set(auth(a.patientToken))
           .set("Idempotency-Key", "k")
           .send({ title: "x", description: "y", amendmentReason: "z" }),
+      () =>
+        request(app)
+          .patch(`/api/medical-records/${id}/visibility`)
+          .set(auth(a.patientToken))
+          .send({ patientVisible: true }),
     ];
 
     for (const call of endpoints) {
@@ -725,3 +730,470 @@ describe("medical records - amendments", () => {
 async function createDraftableTenant() {
   return makeTenant(`T${new Types.ObjectId().toString()}`);
 }
+
+async function finalizeRecord(tenant: Tenant, overrides: Record<string, unknown> = {}) {
+  const created = await createDraft(tenant, overrides);
+  await request(app).post(`/api/medical-records/${created.body.id}/finalize`).set(auth(tenant.adminToken));
+  return created.body.id as string;
+}
+
+async function publishRecord(tenant: Tenant, id: string, patientVisible = true) {
+  return request(app)
+    .patch(`/api/medical-records/${id}/visibility`)
+    .set(auth(tenant.adminToken))
+    .send({ patientVisible });
+}
+
+describe("medical records - staff visibility endpoint", () => {
+  it("patientVisible defaults to false on create", async () => {
+    const a = await makeTenant("A");
+    const created = await createDraft(a);
+    expect(created.body.patientVisible).toBe(false);
+  });
+
+  it("a legacy record missing patientVisible entirely remains hidden from the portal", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    // Simulate a pre-migration document where the field was never written -
+    // not even set to false - bypassing the schema default via a raw update.
+    await MedicalRecord.collection.updateOne({ _id: new Types.ObjectId(id) }, { $unset: { patientVisible: "" } });
+
+    const list = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(list.body.data).toHaveLength(0);
+
+    const detail = await request(app).get(`/api/portal/medical-records/${id}`).set(auth(a.patientToken));
+    expect(detail.status).toBe(404);
+  });
+
+  it("a draft cannot have its visibility changed (409)", async () => {
+    const a = await makeTenant("A");
+    const created = await createDraft(a);
+
+    const response = await publishRecord(a, created.body.id);
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("MEDICAL_RECORD_NOT_FINALIZED");
+  });
+
+  it("a finalized original can be published", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+
+    const response = await publishRecord(a, id, true);
+    expect(response.status).toBe(200);
+    expect(response.body.patientVisible).toBe(true);
+  });
+
+  it("a published original can be unpublished", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+
+    const response = await publishRecord(a, id, false);
+    expect(response.status).toBe(200);
+    expect(response.body.patientVisible).toBe(false);
+  });
+
+  it("repeating the same visibility value is safely idempotent", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+
+    const first = await publishRecord(a, id, true);
+    const second = await publishRecord(a, id, true);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.body.patientVisible).toBe(true);
+  });
+
+  it("visibility changes never alter clinical content, patient, dentist, or finalized state", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a, { attendingDentistId: a.dentist._id.toString() });
+    const before = await request(app).get(`/api/medical-records/${id}`).set(auth(a.adminToken));
+
+    await publishRecord(a, id, true);
+
+    const after = await request(app).get(`/api/medical-records/${id}`).set(auth(a.adminToken));
+    expect(after.body.title).toBe(before.body.title);
+    expect(after.body.description).toBe(before.body.description);
+    expect(after.body.recordDate).toBe(before.body.recordDate);
+    expect(after.body.status).toBe("finalized");
+    expect(after.body.attendingDentist.id).toBe(before.body.attendingDentist.id);
+    expect(after.body.patient.id).toBe(before.body.patient.id);
+  });
+
+  it("Clinic B cannot change Clinic A's record visibility (404)", async () => {
+    const a = await makeTenant("A");
+    const b = await makeTenant("B");
+    const id = await finalizeRecord(a);
+
+    const response = await publishRecord(b, id, true);
+    expect(response.status).toBe(404);
+  });
+
+  it("rejects unknown fields on the visibility body (strict schema)", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+
+    for (const body of [
+      { patientVisible: true, patientVisibilityUpdatedAt: new Date().toISOString() },
+      { patientVisible: true, patientVisibilityUpdatedByUserId: new Types.ObjectId().toString() },
+      { patientVisible: "true" },
+      {},
+    ]) {
+      const response = await request(app)
+        .patch(`/api/medical-records/${id}/visibility`)
+        .set(auth(a.adminToken))
+        .send(body);
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it("rejects a malformed record id with a controlled 400", async () => {
+    const a = await makeTenant("A");
+    const response = await request(app)
+      .patch("/api/medical-records/not-an-id/visibility")
+      .set(auth(a.adminToken))
+      .send({ patientVisible: true });
+    expect(response.status).toBe(400);
+  });
+
+  it("visibility can be controlled independently for an original and its amendment", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "vis-amend-1")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+
+    const publishOriginal = await publishRecord(a, id, true);
+    expect(publishOriginal.status).toBe(200);
+
+    const amendmentStillHidden = await request(app)
+      .get(`/api/medical-records/${amendment.body.id}`)
+      .set(auth(a.adminToken));
+    expect(amendmentStillHidden.body.patientVisible).toBe(false);
+
+    const publishAmendment = await publishRecord(a, amendment.body.id, true);
+    expect(publishAmendment.status).toBe(200);
+    expect(publishAmendment.body.patientVisible).toBe(true);
+  });
+});
+
+describe("medical records - patient portal visibility", () => {
+  it("patient sees only their own finalized, visible records", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+
+    const response = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].id).toBe(id);
+    expect(response.body.data[0]).not.toHaveProperty("description");
+  });
+
+  it("another patient in the same clinic cannot see the record", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+
+    const otherPatient = await makePatient(a.clinicId, "Other Patient");
+    const { token: otherPatientToken } = await makeUser(a.clinicId, "patient", otherPatient._id);
+
+    const list = await request(app).get("/api/portal/medical-records").set(auth(otherPatientToken));
+    expect(list.body.data).toHaveLength(0);
+
+    const detail = await request(app)
+      .get(`/api/portal/medical-records/${id}`)
+      .set(auth(otherPatientToken));
+    expect(detail.status).toBe(404);
+  });
+
+  it("a cross-clinic patient cannot see the record", async () => {
+    const a = await makeTenant("A");
+    const b = await makeTenant("B");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+
+    const list = await request(app).get("/api/portal/medical-records").set(auth(b.patientToken));
+    expect(list.body.data).toHaveLength(0);
+
+    const detail = await request(app).get(`/api/portal/medical-records/${id}`).set(auth(b.patientToken));
+    expect(detail.status).toBe(404);
+  });
+
+  it("a hidden (unpublished) record returns 404 by direct id", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    // Never published.
+
+    const response = await request(app).get(`/api/portal/medical-records/${id}`).set(auth(a.patientToken));
+    expect(response.status).toBe(404);
+  });
+
+  it("a draft record returns 404 through the portal even with a guessed id", async () => {
+    const a = await makeTenant("A");
+    const created = await createDraft(a);
+
+    const response = await request(app)
+      .get(`/api/portal/medical-records/${created.body.id}`)
+      .set(auth(a.patientToken));
+    expect(response.status).toBe(404);
+  });
+
+  it("an amendment id cannot be fetched directly through the portal", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-1")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+    await publishRecord(a, amendment.body.id, true);
+
+    const response = await request(app)
+      .get(`/api/portal/medical-records/${amendment.body.id}`)
+      .set(auth(a.patientToken));
+    expect(response.status).toBe(404);
+  });
+
+  it("the list never includes amendments as standalone rows", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-2")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+    await publishRecord(a, amendment.body.id, true);
+
+    const response = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].id).toBe(id);
+  });
+
+  it("visible original + hidden amendment: hasVisibleAmendments is false and the amendment is absent from detail", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+    await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-3")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+    // Amendment intentionally never published.
+
+    const list = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(list.body.data[0].hasVisibleAmendments).toBe(false);
+
+    const detail = await request(app).get(`/api/portal/medical-records/${id}`).set(auth(a.patientToken));
+    expect(detail.body.amendments).toHaveLength(0);
+  });
+
+  it("visible original + visible amendment: the amendment appears with its full text", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-4")
+      .send({
+        title: "Correction",
+        description: "The correct tooth was upper right.",
+        amendmentReason: "Charting error",
+      });
+    await publishRecord(a, amendment.body.id, true);
+
+    const list = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(list.body.data[0].hasVisibleAmendments).toBe(true);
+
+    const detail = await request(app).get(`/api/portal/medical-records/${id}`).set(auth(a.patientToken));
+    expect(detail.body.amendments).toHaveLength(1);
+    expect(detail.body.amendments[0]).toMatchObject({
+      title: "Correction",
+      description: "The correct tooth was upper right.",
+      amendmentReason: "Charting error",
+    });
+  });
+
+  it("hidden original + visible amendment exposes neither through the portal", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    // Original never published.
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-5")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+    await publishRecord(a, amendment.body.id, true);
+
+    const list = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(list.body.data).toHaveLength(0);
+
+    const originalDetail = await request(app)
+      .get(`/api/portal/medical-records/${id}`)
+      .set(auth(a.patientToken));
+    expect(originalDetail.status).toBe(404);
+
+    const amendmentDetail = await request(app)
+      .get(`/api/portal/medical-records/${amendment.body.id}`)
+      .set(auth(a.patientToken));
+    expect(amendmentDetail.status).toBe(404);
+  });
+
+  it("publishing an amendment does not publish its original", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-6")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+
+    await publishRecord(a, amendment.body.id, true);
+
+    const original = await request(app).get(`/api/medical-records/${id}`).set(auth(a.adminToken));
+    expect(original.body.patientVisible).toBe(false);
+  });
+
+  it("unpublishing the original immediately hides its (still-visible) amendments", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+    const amendment = await request(app)
+      .post(`/api/medical-records/${id}/amendments`)
+      .set(auth(a.adminToken))
+      .set("Idempotency-Key", "portal-amend-7")
+      .send({ title: "Correction", description: "text", amendmentReason: "reason" });
+    await publishRecord(a, amendment.body.id, true);
+
+    const beforeUnpublish = await request(app)
+      .get(`/api/portal/medical-records/${id}`)
+      .set(auth(a.patientToken));
+    expect(beforeUnpublish.body.amendments).toHaveLength(1);
+
+    await publishRecord(a, id, false);
+
+    const afterUnpublish = await request(app)
+      .get(`/api/portal/medical-records/${id}`)
+      .set(auth(a.patientToken));
+    expect(afterUnpublish.status).toBe(404);
+  });
+
+  it("detail DTO excludes author identity and all forbidden internal fields", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a, { attendingDentistId: a.dentist._id.toString() });
+    await publishRecord(a, id, true);
+
+    const response = await request(app).get(`/api/portal/medical-records/${id}`).set(auth(a.patientToken));
+    expect(response.status).toBe(200);
+    for (const forbiddenKey of [
+      "clinicId",
+      "patientId",
+      "appointmentId",
+      "authorUserId",
+      "author",
+      "patientVisibilityUpdatedByUserId",
+      "attendingDentistId",
+      "amendedRecordId",
+      "idempotencyKey",
+      "status",
+      "__v",
+    ]) {
+      expect(response.body).not.toHaveProperty(forbiddenKey);
+    }
+    expect(response.body.attendingDentist).toMatchObject({ name: a.dentist.name });
+    expect(Object.keys(response.body.attendingDentist)).toEqual(["name"]);
+  });
+
+  it("list DTO excludes the clinical description", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+
+    const response = await request(app).get("/api/portal/medical-records").set(auth(a.patientToken));
+    expect(response.body.data[0]).not.toHaveProperty("description");
+  });
+
+  it("rejects a malformed record id with a controlled 400", async () => {
+    const a = await makeTenant("A");
+    const response = await request(app)
+      .get("/api/portal/medical-records/not-an-id")
+      .set(auth(a.patientToken));
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects unknown list query parameters, including patientId/clinicId/status", async () => {
+    const a = await makeTenant("A");
+    for (const qs of [
+      `patientId=${a.patient._id}`,
+      `clinicId=${a.clinicId}`,
+      "status=draft",
+      "somethingUnknown=1",
+    ]) {
+      const response = await request(app)
+        .get(`/api/portal/medical-records?${qs}`)
+        .set(auth(a.patientToken));
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it("pagination does not weaken ownership or visibility filtering", async () => {
+    const a = await makeTenant("A");
+    const b = await makeTenant("B");
+    const id = await finalizeRecord(a);
+    await publishRecord(a, id, true);
+
+    const response = await request(app)
+      .get("/api/portal/medical-records?page=1&limit=50")
+      .set(auth(b.patientToken));
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveLength(0);
+    expect(response.body.pagination.total).toBe(0);
+  });
+});
+
+describe("medical records - visibility concurrency", () => {
+  it("concurrent opposite visibility updates: both succeed, record stays finalized, no duplicates", async () => {
+    const a = await makeTenant("A");
+    const id = await finalizeRecord(a);
+
+    const [r1, r2] = await Promise.all([publishRecord(a, id, true), publishRecord(a, id, false)]);
+
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+
+    const record = await MedicalRecord.findById(id);
+    expect(record?.status).toBe("finalized");
+    expect(typeof record?.patientVisible).toBe("boolean");
+
+    const count = await MedicalRecord.countDocuments({ _id: id });
+    expect(count).toBe(1);
+  });
+
+  it("a concurrent visibility update racing with finalize can never expose a draft", async () => {
+    const a = await makeTenant("A");
+    const created = await createDraft(a);
+
+    const [visibilityResult, finalizeResult] = await Promise.all([
+      publishRecord(a, created.body.id, true),
+      request(app).post(`/api/medical-records/${created.body.id}/finalize`).set(auth(a.staffToken)),
+    ]);
+
+    // Whichever order they land in, a record that never reached "finalized"
+    // before the visibility call ran must reject that call (409) - it can
+    // never become patientVisible while still a draft.
+    expect(finalizeResult.status).toBe(200);
+    expect([200, 409]).toContain(visibilityResult.status);
+
+    const record = await MedicalRecord.findById(created.body.id);
+    if (visibilityResult.status === 200) {
+      expect(record?.status).toBe("finalized");
+    } else {
+      expect(record?.patientVisible).toBe(false);
+    }
+  });
+});
