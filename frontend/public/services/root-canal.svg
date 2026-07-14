@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Root canal treatment illustration">
+  <rect width="400" height="300" rx="16" fill="#fef2f2"/>
+  <path d="M200,90 C170,90 155,110 158,132 L172,132 C168,155 165,180 163,210 C162,225 172,228 176,216 C179,206 186,200 200,200 C214,200 221,206 224,216 C228,228 238,225 237,210 C235,180 232,155 228,132 L242,132 C245,110 230,90 200,90 Z"
+        fill="#ffffff" stroke="#dc2626" stroke-width="6"/>
+  <line x1="176" y1="132" x2="188" y2="205" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+  <line x1="224" y1="132" x2="212" y2="205" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+</svg>

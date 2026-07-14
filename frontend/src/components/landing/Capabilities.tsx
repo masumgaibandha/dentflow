@@ -4,8 +4,16 @@
 const CAPABILITIES = [
   { value: "3", label: "Role types", detail: "Admin, staff, and patient - each with its own scoped view" },
   { value: "100%", label: "Tenant isolated", detail: "Every query is scoped to the requesting clinic" },
-  { value: "Live", label: "Stripe payments", detail: "Card payments run through Stripe's test-mode API" },
-  { value: "Full", label: "Audit trail", detail: "Finalized records track who published what, and when" },
+  {
+    value: "Test-mode",
+    label: "Stripe test payments",
+    detail: "Secure test-mode card-payment flow with verified payment completion",
+  },
+  {
+    value: "Immutable",
+    label: "Immutable clinical records",
+    detail: "Finalized records cannot be overwritten, and corrections are preserved as amendments",
+  },
 ];
 
 export function Capabilities() {

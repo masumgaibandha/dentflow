@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Composite filling illustration">
+  <rect width="400" height="300" rx="16" fill="#eff6ff"/>
+  <path d="M200,90 C160,90 140,120 145,150 C148,170 155,190 160,215 C163,230 175,235 180,220 C183,210 188,205 200,205 C212,205 217,210 220,220 C225,235 237,230 240,215 C245,190 252,170 255,150 C260,120 240,90 200,90 Z"
+        fill="#ffffff" stroke="#2563eb" stroke-width="6"/>
+  <circle cx="196" cy="140" r="16" fill="#059669"/>
+  <circle cx="196" cy="140" r="16" fill="none" stroke="#047857" stroke-width="3"/>
+</svg>

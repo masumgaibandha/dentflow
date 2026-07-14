@@ -13,6 +13,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { TreatmentCardSkeleton } from "@/components/ui/Skeleton";
 import { useMe } from "@/hooks/useAuth";
 import { useTreatmentsList } from "@/hooks/useTreatments";
+import { resolveClinicSlug } from "@/lib/publicClinic";
 
 const DEFAULT_FILTERS: TreatmentFiltersValue = {
   search: "",
@@ -27,10 +28,18 @@ function ItemsExploreContent() {
   const searchParams = useSearchParams();
   const { data: me, isLoading: isMeLoading } = useMe();
 
-  // URL clinic always has first priority.
-  // When no clinic exists in the URL, use the logged-in user's clinic.
+  // Resolution order: explicit ?clinic= query param, then the logged-in
+  // user's own clinic, then the deployment's default, then this
+  // assignment's demo clinic (see lib/publicClinic.ts) - the public catalog
+  // is never a dead end. A query param resolves immediately; without one we
+  // wait for auth state to settle first so a logged-in user briefly sees
+  // their own clinic rather than flashing the demo clinic and refetching.
   const clinicFromUrl = searchParams.get("clinic")?.trim();
-  const clinicSlug = clinicFromUrl || me?.clinic.slug;
+  const clinicSlug = clinicFromUrl
+    ? resolveClinicSlug({ queryClinic: clinicFromUrl })
+    : isMeLoading
+      ? undefined
+      : resolveClinicSlug({ userClinicSlug: me?.clinic.slug });
 
   const [filters, setFilters] =
     useState<TreatmentFiltersValue>(DEFAULT_FILTERS);
@@ -73,16 +82,9 @@ function ItemsExploreContent() {
           </div>
         )}
 
-        {!clinicSlug && isMeLoading && (
+        {!clinicSlug && (
           <div className="mt-12 text-center text-zinc-500">
             Loading clinic...
-          </div>
-        )}
-
-        {!clinicSlug && !isMeLoading && (
-          <div className="mt-12 rounded-lg border border-amber-300 bg-amber-50 p-6 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            No clinic was specified. Open the public catalog using{" "}
-            <code>?clinic=your-clinic-slug</code>.
           </div>
         )}
 

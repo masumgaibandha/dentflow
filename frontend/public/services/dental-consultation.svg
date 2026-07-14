@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Dental consultation illustration">
+  <rect width="400" height="300" rx="16" fill="#eff6ff"/>
+  <path d="M170,95 C135,95 118,122 122,148 C125,166 131,183 136,205 C139,218 150,222 154,209 C157,200 162,196 172,196 C182,196 187,200 190,209 C194,222 205,218 208,205 C213,183 219,166 222,148 C226,122 205,95 170,95 Z"
+        fill="#ffffff" stroke="#2563eb" stroke-width="6"/>
+  <path d="M250,80 h90 a14,14 0 0 1 14,14 v54 a14,14 0 0 1 -14,14 h-46 l-22,22 v-22 h-22 a14,14 0 0 1 -14,-14 v-54 a14,14 0 0 1 14,-14 Z"
+        fill="#dbeafe" stroke="#2563eb" stroke-width="5"/>
+  <circle cx="278" cy="122" r="5" fill="#2563eb"/>
+  <circle cx="298" cy="122" r="5" fill="#2563eb"/>
+  <circle cx="318" cy="122" r="5" fill="#2563eb"/>
+</svg>

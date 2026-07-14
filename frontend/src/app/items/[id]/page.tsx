@@ -4,13 +4,25 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import { useMe } from "@/hooks/useAuth";
 import { useTreatment } from "@/hooks/useTreatments";
+import { resolveClinicSlug } from "@/lib/publicClinic";
 
 function ItemDetailContent() {
   const params = useParams();
   const id = String(params.id);
   const searchParams = useSearchParams();
-  const clinicSlug = searchParams.get("clinic") ?? process.env.NEXT_PUBLIC_DEFAULT_CLINIC_SLUG;
+  const { data: me, isLoading: isMeLoading } = useMe();
+
+  // Same resolution order as /items (see lib/publicClinic.ts) - an explicit
+  // query param resolves immediately; otherwise wait for auth state to
+  // settle so a logged-in user's own clinic is preferred over the fallback.
+  const clinicFromUrl = searchParams.get("clinic")?.trim();
+  const clinicSlug = clinicFromUrl
+    ? resolveClinicSlug({ queryClinic: clinicFromUrl })
+    : isMeLoading
+      ? undefined
+      : resolveClinicSlug({ userClinicSlug: me?.clinic.slug });
 
   const {
     data: treatment,
@@ -28,8 +40,9 @@ function ItemDetailContent() {
         </Link>
 
         {!clinicSlug && (
-          <div className="mt-8 rounded-lg border border-amber-300 bg-amber-50 p-6 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            No clinic specified. Add <code>?clinic=your-slug</code> to the URL.
+          <div className="mt-8 animate-pulse space-y-4">
+            <div className="h-64 w-full rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-6 w-1/2 rounded bg-zinc-200 dark:bg-zinc-800" />
           </div>
         )}
 

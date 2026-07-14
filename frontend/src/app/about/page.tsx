@@ -33,7 +33,7 @@ export default function AboutPage() {
             <li>One dashboard for day-to-day operations instead of several disconnected tools</li>
             <li>Staff accounts scoped separately from admin-level access</li>
             <li>A public service catalog patients can browse and book from directly</li>
-            <li>Invoicing with real, verified card payments through Stripe</li>
+            <li>Invoicing with verified card payments through Stripe, currently in test mode</li>
           </ul>
         </section>
 

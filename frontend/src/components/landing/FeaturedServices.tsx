@@ -4,12 +4,13 @@ import Link from "next/link";
 import { TreatmentCard } from "@/components/treatments/TreatmentCard";
 import { TreatmentCardSkeleton } from "@/components/ui/Skeleton";
 import { useTreatmentsList } from "@/hooks/useTreatments";
+import { resolveClinicSlug } from "@/lib/publicClinic";
 
-// No default clinic slug is configured yet (that's a Phase 2 seed-data
-// concern - see the assignment-compliance audit). Without one, there is no
-// safe public clinic to load real treatments for, so this section falls back
-// to a services CTA instead of fabricating treatment data client-side.
-const DEFAULT_CLINIC_SLUG = process.env.NEXT_PUBLIC_DEFAULT_CLINIC_SLUG;
+// Always resolves to a real clinic slug (deployment default, or this
+// assignment's seeded demo clinic as the last resort) - see
+// lib/publicClinic.ts. The landing page has no authenticated-user context of
+// its own, so only the query-param tier doesn't apply here.
+const CLINIC_SLUG = resolveClinicSlug({});
 
 function FeaturedServicesFallback() {
   return (
@@ -30,7 +31,7 @@ function FeaturedServicesFallback() {
 
 export function FeaturedServices() {
   const { data, isLoading, isError } = useTreatmentsList({
-    clinicSlug: DEFAULT_CLINIC_SLUG,
+    clinicSlug: CLINIC_SLUG,
     sortBy: "newest",
     sortOrder: "desc",
     limit: 4,
@@ -52,9 +53,7 @@ export function FeaturedServices() {
         </Link>
       </div>
 
-      {!DEFAULT_CLINIC_SLUG && <FeaturedServicesFallback />}
-
-      {DEFAULT_CLINIC_SLUG && isLoading && (
+      {isLoading && (
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <TreatmentCardSkeleton key={index} />
@@ -62,14 +61,12 @@ export function FeaturedServices() {
         </div>
       )}
 
-      {DEFAULT_CLINIC_SLUG && !isLoading && (isError || !data || data.data.length === 0) && (
-        <FeaturedServicesFallback />
-      )}
+      {!isLoading && (isError || !data || data.data.length === 0) && <FeaturedServicesFallback />}
 
-      {DEFAULT_CLINIC_SLUG && !isLoading && !isError && data && data.data.length > 0 && (
+      {!isLoading && !isError && data && data.data.length > 0 && (
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {data.data.map((treatment) => (
-            <TreatmentCard key={treatment.id} treatment={treatment} clinicSlug={DEFAULT_CLINIC_SLUG} />
+            <TreatmentCard key={treatment.id} treatment={treatment} clinicSlug={CLINIC_SLUG} />
           ))}
         </div>
       )}

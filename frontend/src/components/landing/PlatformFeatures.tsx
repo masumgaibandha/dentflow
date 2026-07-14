@@ -12,8 +12,8 @@ const FEATURES = [
     body: "Book, reschedule, and cancel appointments with automatic conflict checking against clinic hours and dentist availability.",
   },
   {
-    title: "Real payments",
-    body: "Patient invoices are paid through Stripe's card payment flow, verified server-side before an invoice is ever marked paid.",
+    title: "Stripe test payments",
+    body: "Patient invoices are paid through Stripe's test-mode card payment flow, verified server-side before an invoice is ever marked paid.",
   },
   {
     title: "Clinical records",

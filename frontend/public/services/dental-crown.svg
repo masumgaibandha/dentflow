@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Dental crown illustration">
+  <rect width="400" height="300" rx="16" fill="#fffbeb"/>
+  <path d="M200,130 C165,130 148,158 152,185 C155,203 161,215 166,232 C169,242 179,246 183,234 C186,226 191,222 200,222 C209,222 214,226 217,234 C221,246 231,242 234,232 C239,215 245,203 248,185 C252,158 235,130 200,130 Z"
+        fill="#ffffff" stroke="#d97706" stroke-width="6"/>
+  <path d="M158,120 l10,-34 l24,20 l8,-30 l8,30 l24,-20 l10,34 Z" fill="#f59e0b" stroke="#d97706" stroke-width="4" stroke-linejoin="round"/>
+</svg>
