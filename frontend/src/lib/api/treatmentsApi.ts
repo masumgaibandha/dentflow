@@ -14,7 +14,7 @@ export type TreatmentCategory = (typeof TREATMENT_CATEGORIES)[number];
 export interface Treatment {
   id: string;
   clinicId: string;
-  imageUrl: string;
+  imageUrl?: string;
   title: string;
   shortDescription: string;
   fullDescription: string;
@@ -98,7 +98,7 @@ export function getTreatment(
 }
 
 export interface TreatmentInput {
-  imageUrl: string;
+  imageUrl?: string;
   title: string;
   shortDescription: string;
   fullDescription: string;

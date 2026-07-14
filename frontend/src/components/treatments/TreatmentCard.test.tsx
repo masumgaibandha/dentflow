@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { TreatmentCard } from "@/components/treatments/TreatmentCard";
+import { TREATMENT_IMAGE_FALLBACK_SRC } from "@/components/treatments/TreatmentImage";
 import type { Treatment } from "@/lib/api/treatmentsApi";
 
 const treatment: Treatment = {
@@ -55,5 +56,11 @@ describe("TreatmentCard", () => {
     expect(screen.getByText(/Custom cap that restores/)).toBeInTheDocument();
     expect(screen.getByText("$1100.00")).toBeInTheDocument();
     expect(screen.getByText("60 min")).toBeInTheDocument();
+  });
+
+  it("shows the local fallback image when imageUrl is missing", () => {
+    const treatmentWithoutImage: Treatment = { ...treatment, imageUrl: undefined };
+    render(<TreatmentCard treatment={treatmentWithoutImage} />);
+    expect(screen.getByAltText("Dental Crown")).toHaveAttribute("src", TREATMENT_IMAGE_FALLBACK_SRC);
   });
 });

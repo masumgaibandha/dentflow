@@ -13,7 +13,9 @@ export type TreatmentCategory = (typeof TREATMENT_CATEGORIES)[number];
 
 export interface TreatmentDocument extends Document {
   clinicId: Types.ObjectId;
-  imageUrl: string;
+  // Optional - the public catalog and details pages fall back to a local
+  // illustration (see frontend TreatmentImage) whenever this is unset.
+  imageUrl?: string;
   title: string;
   shortDescription: string;
   fullDescription: string;
@@ -31,7 +33,7 @@ export interface TreatmentDocument extends Document {
 const treatmentSchema = new Schema<TreatmentDocument>(
   {
     clinicId: { type: Schema.Types.ObjectId, ref: "Clinic", required: true, index: true },
-    imageUrl: { type: String, required: true, trim: true },
+    imageUrl: { type: String, required: false, trim: true },
     title: { type: String, required: true, trim: true },
     shortDescription: { type: String, required: true, trim: true },
     fullDescription: { type: String, required: true, trim: true },

@@ -28,8 +28,12 @@ export function TreatmentForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-      <FormField label="Image URL" error={errors.imageUrl?.message}>
-        <input {...register("imageUrl")} className={inputClasses} placeholder="https://..." />
+      <FormField label="Image URL (optional)" error={errors.imageUrl?.message}>
+        <input
+          {...register("imageUrl")}
+          className={inputClasses}
+          placeholder="https://... or /services/example.svg"
+        />
       </FormField>
       <FormField label="Title" error={errors.title?.message}>
         <input {...register("title")} className={inputClasses} />

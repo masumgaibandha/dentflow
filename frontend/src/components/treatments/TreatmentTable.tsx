@@ -1,14 +1,20 @@
+import Link from "next/link";
 import { TreatmentRowSkeleton } from "@/components/ui/Skeleton";
 import type { Treatment } from "@/lib/api/treatmentsApi";
 
 export function TreatmentTable({
   treatments,
   isLoading,
+  clinicSlug,
   onEdit,
   onDelete,
 }: {
   treatments: Treatment[];
   isLoading: boolean;
+  // Preserves clinic context on the View link, same pattern as TreatmentCard -
+  // the treatment list itself is already scoped server-side to the caller's
+  // own clinic, so this can never point at another clinic's item.
+  clinicSlug?: string;
   onEdit: (treatment: Treatment) => void;
   onDelete: (treatment: Treatment) => void;
 }) {
@@ -37,32 +43,44 @@ export function TreatmentTable({
           )}
 
           {!isLoading &&
-            treatments.map((treatment) => (
-              <tr key={treatment.id}>
-                <td className="p-3 font-medium">{treatment.title}</td>
-                <td className="p-3">{treatment.category}</td>
-                <td className="p-3">${treatment.price.toFixed(2)}</td>
-                <td className="p-3">{treatment.durationMinutes} min</td>
-                <td className="p-3">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(treatment)}
-                      className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(treatment)}
-                      className="rounded-md border border-red-300 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            treatments.map((treatment) => {
+              const viewHref = clinicSlug
+                ? `/items/${treatment.id}?clinic=${encodeURIComponent(clinicSlug)}`
+                : `/items/${treatment.id}`;
+
+              return (
+                <tr key={treatment.id}>
+                  <td className="p-3 font-medium">{treatment.title}</td>
+                  <td className="p-3">{treatment.category}</td>
+                  <td className="p-3">${treatment.price.toFixed(2)}</td>
+                  <td className="p-3">{treatment.durationMinutes} min</td>
+                  <td className="p-3">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={viewHref}
+                        className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                      >
+                        View
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => onEdit(treatment)}
+                        className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(treatment)}
+                        className="rounded-md border border-red-300 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
         </tbody>
       </table>
     </div>

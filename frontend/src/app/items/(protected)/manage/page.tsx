@@ -138,6 +138,7 @@ export default function ManageTreatmentsPage() {
             <TreatmentTable
               treatments={data?.data ?? []}
               isLoading={isLoading}
+              clinicSlug={me?.clinic.slug}
               onEdit={setEditingTreatment}
               onDelete={setDeletingTreatment}
             />
