@@ -60,6 +60,28 @@ export function PatientRowSkeleton() {
   );
 }
 
+export function MedicalRecordRowSkeleton() {
+  return (
+    <tr>
+      <td className="p-3">
+        <Skeleton className="h-4 w-40" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-28" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-16" />
+      </td>
+      <td className="p-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+    </tr>
+  );
+}
+
 export function DentistRowSkeleton() {
   return (
     <tr>

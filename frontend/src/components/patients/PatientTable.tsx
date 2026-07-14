@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PatientRowSkeleton } from "@/components/ui/Skeleton";
 import type { Patient } from "@/lib/api/patientsApi";
 
@@ -54,6 +55,12 @@ export function PatientTable({
                 </td>
                 <td className="p-3">
                   <div className="flex justify-end gap-2">
+                    <Link
+                      href={`/patients/${patient.id}/medical-records`}
+                      className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    >
+                      Medical records
+                    </Link>
                     <button
                       type="button"
                       onClick={() => onEdit(patient)}

@@ -62,6 +62,10 @@ export function useLoginMutation() {
         queryKey: ["portal"],
       });
 
+      queryClient.removeQueries({
+        queryKey: ["medical-records"],
+      });
+
       setToken(data.token);
 
       queryClient.setQueryData<MeResponse>(ME_QUERY_KEY, {
@@ -145,6 +149,10 @@ export function useLogout() {
 
     queryClient.removeQueries({
       queryKey: ["portal"],
+    });
+
+    queryClient.removeQueries({
+      queryKey: ["medical-records"],
     });
 
     queryClient.removeQueries({
