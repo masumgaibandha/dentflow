@@ -6,6 +6,7 @@ import { notFoundHandler } from "./middleware/notFound";
 import { appointmentRouter } from "./modules/appointments/appointment.routes";
 import { authRouter } from "./modules/auth/auth.routes";
 import { clinicRouter } from "./modules/clinics/clinic.routes";
+import { contactRouter } from "./modules/contact/contact.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { dentistRouter } from "./modules/dentists/dentist.routes";
 import { invoiceRouter } from "./modules/invoices/invoice.routes";
@@ -26,6 +27,7 @@ export function createApp(): Express {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/contact", contactRouter);
   app.use("/api/treatments", treatmentRouter);
   app.use("/api/patients", patientRouter);
   app.use("/api/dentists", dentistRouter);

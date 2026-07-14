@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { PublicTopBar } from "@/components/layout/PublicTopBar";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { TreatmentCard } from "@/components/treatments/TreatmentCard";
 import {
   TreatmentFilters,
@@ -59,10 +59,8 @@ function ItemsExploreContent() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <PublicTopBar />
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+    <PublicLayout>
+      <div className="mx-auto w-full max-w-6xl px-6 py-10">
         <h1 className="text-2xl font-semibold">Our Dental Services</h1>
 
         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
@@ -145,8 +143,8 @@ function ItemsExploreContent() {
               />
             </>
           )}
-      </main>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { PublicTopBar } from "@/components/layout/PublicTopBar";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { useTreatment } from "@/hooks/useTreatments";
 
 function ItemDetailContent() {
@@ -21,9 +21,8 @@ function ItemDetailContent() {
   const backHref = clinicSlug ? `/items?clinic=${encodeURIComponent(clinicSlug)}` : "/items";
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <PublicTopBar />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
+    <PublicLayout>
+      <div className="mx-auto w-full max-w-3xl px-6 py-10">
         <Link href={backHref} className="text-sm text-zinc-500 hover:underline">
           ← Back to services
         </Link>
@@ -73,8 +72,8 @@ function ItemDetailContent() {
             </p>
           </article>
         )}
-      </main>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }
 
