@@ -1,77 +1,77 @@
 import Image from "next/image";
 import Link from "next/link";
 
-// Both logo assets ship with a baked-in solid background (white / dark navy,
-// not transparent) rather than a transparent PNG - so instead of detecting
-// theme in JS (which would cause a flash while it resolves), each variant is
-// rendered as its own <Image> and shown/hidden purely via Tailwind's `dark:`
-// class variant. Because next-themes applies the `.dark` class to <html>
-// synchronously before first paint, this switches instantly with no flash
-// and no client component needed here at all.
-export function Logo({ className }: { className?: string }) {
+type LogoProps = {
+  className?: string;
+};
+
+export function Logo({ className = "" }: LogoProps) {
   return (
     <Link
       href="/"
       aria-label="DentFlow home"
-      className={`inline-flex h-16 w-48 items-center overflow-visible ${className ?? ""}`}
+      className={`inline-flex h-14 w-36 shrink-0 items-center overflow-visible sm:h-16 sm:w-44 lg:w-48 ${className}`}
     >
       <Image
         src="/assets/primary_logo.png"
-        alt="DentFlow"
+        alt=""
+        aria-hidden="true"
         width={220}
         height={120}
         priority
-        className="h-10 w-auto origin-left scale-[2.2] object-contain dark:hidden"
+        sizes="(max-width: 639px) 144px, (max-width: 1023px) 176px, 192px"
+        className="h-10 w-auto origin-left scale-[1.35] object-contain sm:scale-[1.6] lg:scale-[2.2] dark:hidden"
       />
 
       <Image
         src="/assets/color_logo_transparent.png"
-        alt="DentFlow"
+        alt=""
+        aria-hidden="true"
         width={220}
         height={120}
         priority
-        className="hidden h-10 w-auto origin-left scale-[2.2] object-contain dark:block"
+        sizes="(max-width: 639px) 144px, (max-width: 1023px) 176px, 192px"
+        className="hidden h-10 w-auto origin-left scale-[1.35] object-contain sm:scale-[1.6] lg:scale-[2.2] dark:block"
       />
     </Link>
   );
 }
-// Dark navy footer is dark regardless of site theme (see Footer.tsx), so it
-// always wants the dark-surface logo variant, never the theme-switched pair.
-export function LogoOnDark({ className }: { className?: string }) {
+
+export function LogoOnDark({ className = "" }: LogoProps) {
   return (
     <Link
       href="/"
       aria-label="DentFlow home"
-      className={`inline-flex items-center ${className ?? ""}`}
+      className={`inline-flex h-12 w-44 shrink-0 items-center overflow-hidden sm:w-48 ${className}`}
     >
       <Image
         src="/assets/color_logo_transparent.png"
-        alt="DentFlow"
+        alt=""
+        aria-hidden="true"
         width={220}
         height={120}
-        priority
-        className=" h-12 w-auto origin-left scale-[2.2] object-contain"
+        sizes="(max-width: 639px) 176px, 192px"
+        className="h-10 w-auto origin-left scale-[1.25] object-contain sm:scale-[1.45]"
       />
     </Link>
   );
 }
 
-// Compact mark for space-constrained contexts (mobile menu header). The
-// icon's own white background is treated as an intentional badge rather than
-// fought with theme-swapping, so it works the same on any surface.
-export function LogoIcon({ className }: { className?: string }) {
+export function LogoIcon({ className = "" }: LogoProps) {
   return (
     <Link
       href="/"
       aria-label="DentFlow home"
-      className={`inline-flex items-center justify-center rounded-md bg-white p-1 shadow-sm ${className ?? ""}`}
+      className={`inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white p-1 shadow-sm ${className}`}
     >
       <Image
         src="/assets/icon_logo.png"
-        alt="DentFlow"
-        width={28}
-        height={28}
-        className="h-7 w-7 object-contain"
+        alt=""
+        aria-hidden="true"
+        width={32}
+        height={32}
+        sizes="32px"
+        className="size-8 rounded-full object-contain"
       />
     </Link>
   );

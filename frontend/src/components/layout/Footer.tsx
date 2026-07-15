@@ -53,7 +53,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.8fr_1fr_1fr] lg:gap-12">
           {/* Brand */}
           <div>
-            <div className="w-fit origin-left scale-125">
+            <div className="w-fit max-w-full">
               <LogoOnDark />
             </div>
 
