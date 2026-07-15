@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useLogout, useMe } from "@/hooks/useAuth";
 import { getToken } from "@/lib/auth/token";
 
@@ -116,34 +117,40 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="hidden shrink-0 rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 md:inline-flex dark:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            Log out
-          </button>
+          <div className="hidden shrink-0 items-center gap-2 md:flex">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              Log out
+            </button>
+          </div>
 
-          {/* Mobile menu toggle */}
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={() => setMobileOpen((open) => !open)}
-            aria-expanded={mobileOpen}
-            aria-controls="portal-mobile-menu"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-300 md:hidden dark:border-zinc-700"
-          >
-            {mobileOpen ? (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
+          {/* Mobile controls */}
+          <div className="flex shrink-0 items-center gap-2 md:hidden">
+            <ThemeToggle />
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setMobileOpen((open) => !open)}
+              aria-expanded={mobileOpen}
+              aria-controls="portal-mobile-menu"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-300 dark:border-zinc-700"
+            >
+              {mobileOpen ? (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile nav */}

@@ -1,26 +1,170 @@
 @import "tailwindcss";
 
+/* Enables next-themes' class-based dark mode (adds/removes `.dark` on
+   <html>) instead of Tailwind v4's default `prefers-color-scheme` strategy. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------
+   DentFlow brand tokens - single source of truth for color. Components
+   should reach for the semantic names below (bg-background, text-primary,
+   border-border, ...) rather than raw hex values.
+
+   The existing app (80+ files) was already built entirely on Tailwind's
+   stock `zinc` / `blue` neutral+primary scale plus a `teal`/`emerald`
+   accent, always paired with a `dark:` variant. Re-pointing those three
+   scales at the brand palette below re-skins every existing surface -
+   navbar, forms, tables, dialogs, dashboard cards, skeletons, badges -
+   without editing each of those files individually.
+   --------------------------------------------------------------------- */
+
 :root {
+  /* Semantic surface/text tokens */
   --background: #ffffff;
-  --foreground: #171717;
+  --background-soft: #eaf2f7;
+  --surface: #ffffff;
+  --surface-accent: #e7f7f7;
+  --foreground: #0b1f33;
+  --muted-foreground: #64748b;
+  --border: #dce6ed;
+  --primary: #0f4c81;
+  --primary-hover: #0c3d68;
+  --primary-foreground: #ffffff;
+  --accent: #0ea5a8;
+  --accent-hover: #0b8386;
+  --accent-foreground: #ffffff;
+  --danger: #dc2626;
+  --focus-ring: #0ea5a8;
+
+  /* Always dark navy, regardless of the active site theme (matches the
+     supplied color_logo.png asset's own navy background so the footer logo
+     sits flush with no visible edge). */
+  --footer-background: #0b1f33;
+  --footer-foreground: #eaf2f7;
+  --footer-muted: #9fb3c2;
+  --footer-border: #1c3a4a;
+
+  /* Neutral scale (replaces Tailwind's default zinc) - a soft-blue-gray to
+     dark-navy ramp so `zinc-*` utilities and their `dark:` counterparts
+     read as on-brand instead of generic gray. */
+  --color-zinc-50: #f7fafc;
+  --color-zinc-100: #eaf2f7;
+  --color-zinc-200: #dce6ed;
+  --color-zinc-300: #c3d2dc;
+  --color-zinc-400: #9fb3c2;
+  --color-zinc-500: #64748b;
+  --color-zinc-600: #52657a;
+  --color-zinc-700: #3d4f61;
+  --color-zinc-800: #29465a;
+  --color-zinc-900: #102a3d;
+  --color-zinc-950: #071521;
+
+  /* Primary scale (replaces Tailwind's default blue) - anchored at 600 =
+     Deep Clinical Blue. */
+  --color-blue-50: #eaf2f8;
+  --color-blue-100: #d3e4f0;
+  --color-blue-200: #a8c9e1;
+  --color-blue-300: #7cadd1;
+  --color-blue-400: #4a8ab7;
+  --color-blue-500: #24699c;
+  --color-blue-600: #0f4c81;
+  --color-blue-700: #0c3d68;
+  --color-blue-800: #0a3153;
+  --color-blue-900: #082744;
+  --color-blue-950: #051726;
+
+  /* Accent scale (replaces Tailwind's default teal) - anchored at 600 =
+     Fresh Teal. Used for the controlled accent (highlights, secondary
+     CTA emphasis) - never for status ("green means good") which stays on
+     the untouched `emerald`/`green` scale. */
+  --color-teal-50: #e7f7f7;
+  --color-teal-100: #c9eded;
+  --color-teal-200: #9edfdf;
+  --color-teal-300: #6ed0d0;
+  --color-teal-400: #3bbebe;
+  --color-teal-500: #16adad;
+  --color-teal-600: #0ea5a8;
+  --color-teal-700: #0b8386;
+  --color-teal-800: #096668;
+  --color-teal-900: #084f51;
+  --color-teal-950: #042b2c;
+}
+
+.dark {
+  --background: #071521;
+  --background-soft: #0b1f33;
+  --surface: #102a3d;
+  --surface-accent: #143449;
+  --foreground: #f8fafc;
+  --muted-foreground: #a8bac8;
+  --border: #29465a;
+  --primary: #2f7dc0;
+  --primary-hover: #4a90cc;
+  --primary-foreground: #ffffff;
+  --accent: #24c2c5;
+  --accent-hover: #3fd0d3;
+  --accent-foreground: #071521;
+  --danger: #f87171;
+  --focus-ring: #24c2c5;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-soft: var(--background-soft);
+  --color-surface: var(--surface);
+  --color-surface-accent: var(--surface-accent);
   --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), system-ui, Arial, sans-serif;
+  }
+
+  /* One consistent, visible focus treatment app-wide (buttons, links,
+     inputs, cards-as-links, ...) instead of relying on each component to
+     define its own. Components with an explicit focus style keep it. */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Small reusable rhythm/typography primitives used by the redesigned
+     landing/marketing sections, kept intentionally minimal. */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  @keyframes hero-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Only animates when the user hasn't asked for reduced motion - see the
+     motion-safe: variant applied at every call site. */
+  .animate-hero-fade {
+    animation: hero-fade-in 0.35s ease-out;
+  }
 }

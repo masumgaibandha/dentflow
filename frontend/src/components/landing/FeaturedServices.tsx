@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/Button";
+import { Section } from "@/components/ui/Section";
 import { TreatmentCard } from "@/components/treatments/TreatmentCard";
 import { TreatmentCardSkeleton } from "@/components/ui/Skeleton";
 import { useTreatmentsList } from "@/hooks/useTreatments";
@@ -14,15 +16,12 @@ const CLINIC_SLUG = resolveClinicSlug({});
 
 function FeaturedServicesFallback() {
   return (
-    <div className="mt-12 flex flex-col items-center gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="max-w-md text-zinc-600 dark:text-zinc-400">
+    <div className="mt-12 flex flex-col items-center gap-4 rounded-xl border border-border bg-surface p-12 text-center">
+      <p className="max-w-md text-muted-foreground">
         Each clinic on DentFlow publishes its own service catalog with real pricing and
         availability. Browse a clinic&apos;s services directly to see them in action.
       </p>
-      <Link
-        href="/items"
-        className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-      >
+      <Link href="/items" className={buttonVariants({ variant: "primary" })}>
         Browse services
       </Link>
     </div>
@@ -38,17 +37,18 @@ export function FeaturedServices() {
   });
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 py-16">
+    <Section tone="default">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <p className="text-sm font-semibold tracking-wide text-accent uppercase">Catalog</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
             Featured dental services
           </h2>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+          <p className="mt-2 text-muted-foreground">
             A sample of the treatments clinics publish through DentFlow.
           </p>
         </div>
-        <Link href="/items" className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+        <Link href="/items" className="text-sm font-medium text-primary hover:underline">
           View all services →
         </Link>
       </div>
@@ -70,6 +70,6 @@ export function FeaturedServices() {
           ))}
         </div>
       )}
-    </section>
+    </Section>
   );
 }

@@ -1,3 +1,6 @@
+import { Section } from "@/components/ui/Section";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+
 // Real, verifiable facts about the platform's architecture and scope - not
 // fabricated adoption numbers or business metrics. Framed as capabilities,
 // each one true of the current build.
@@ -18,27 +21,29 @@ const CAPABILITIES = [
 
 export function Capabilities() {
   return (
-    <section className="border-y border-zinc-200 bg-zinc-50 px-6 py-16 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Built for how clinics actually run
-          </h2>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
-            A few specifics about what&apos;s under the hood.
-          </p>
-        </div>
+    <Section tone="soft">
+      <SectionHeading
+        align="center"
+        eyebrow="Under the hood"
+        title="Built for how clinics actually run"
+        description="A few specifics about what's under the hood."
+        className="mx-auto"
+      />
 
-        <dl className="mt-12 grid grid-cols-2 gap-8 lg:grid-cols-4">
-          {CAPABILITIES.map((item) => (
-            <div key={item.label} className="text-center">
-              <dt className="text-3xl font-bold text-blue-600 dark:text-blue-400">{item.value}</dt>
-              <dd className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{item.label}</dd>
-              <dd className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">{item.detail}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </section>
+      <dl className="mt-12 grid grid-cols-2 gap-6 lg:grid-cols-4">
+        {CAPABILITIES.map((item) => (
+          <div
+            key={item.label}
+            className="min-w-0 rounded-xl border border-border bg-surface p-6 text-center shadow-sm"
+          >
+            <dt className="text-2xl font-bold text-balance break-words text-primary sm:text-3xl">
+              {item.value}
+            </dt>
+            <dd className="mt-1 font-medium text-foreground">{item.label}</dd>
+            <dd className="mt-1 text-xs text-muted-foreground">{item.detail}</dd>
+          </div>
+        ))}
+      </dl>
+    </Section>
   );
 }

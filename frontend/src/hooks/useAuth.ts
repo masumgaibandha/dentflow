@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchMe,
@@ -76,14 +76,31 @@ export function useLoginMutation() {
   });
 }
 
-export function useMe() {
-  const [tokenChecked, setTokenChecked] = useState(false);
-  const [hasToken, setHasToken] = useState(false);
+// There's nothing to actually subscribe to here - localStorage's own token
+// value only ever changes through setToken()/clearToken() in this same tab,
+// never from underneath a mounted useMe() caller, so the subscribe callback
+// is a no-op that never fires. useSyncExternalStore is used purely for its
+// getSnapshot/getServerSnapshot split: `null` on the server (and on React's
+// first client render, before it's safe to read localStorage) versus the
+// real token-presence boolean once actually on the client - resolved by
+// React itself, with no setState call anywhere. That's what keeps this out
+// of the React Compiler's react-hooks/set-state-in-effect rule, which the
+// equivalent useState+useEffect(() => setHasToken(...)) pattern used to hit.
+function subscribeToToken() {
+  return () => {};
+}
 
-  useEffect(() => {
-    setHasToken(Boolean(getToken()));
-    setTokenChecked(true);
-  }, []);
+function getTokenSnapshot(): boolean | null {
+  return Boolean(getToken());
+}
+
+function getServerTokenSnapshot(): boolean | null {
+  return null;
+}
+
+export function useMe() {
+  const hasToken = useSyncExternalStore(subscribeToToken, getTokenSnapshot, getServerTokenSnapshot);
+  const tokenChecked = hasToken !== null;
 
   const query = useQuery({
     queryKey: ME_QUERY_KEY,
@@ -96,7 +113,7 @@ export function useMe() {
 
       return fetchMe(token);
     },
-    enabled: tokenChecked && hasToken,
+    enabled: tokenChecked && Boolean(hasToken),
     retry: false,
     staleTime: 60_000,
   });

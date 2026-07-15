@@ -39,9 +39,9 @@ function CustomTooltip({
   if (!active || !payload || payload.length === 0) return null;
   const datum = payload[0].payload;
   return (
-    <div className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs shadow-md dark:border-zinc-700 dark:bg-zinc-900">
-      <p className="font-medium text-zinc-900 dark:text-zinc-100">{datum.label}</p>
-      <p className="text-zinc-600 dark:text-zinc-400">${datum.amountDollars.toFixed(2)}</p>
+    <div className="rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-md">
+      <p className="font-medium text-foreground">{datum.label}</p>
+      <p className="text-muted-foreground">${datum.amountDollars.toFixed(2)}</p>
     </div>
   );
 }
@@ -97,8 +97,8 @@ export function RevenueChart({ label, days }: { label: string; days: DashboardCh
               width={48}
               className="fill-zinc-500 dark:fill-zinc-400"
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(59, 130, 246, 0.08)" }} />
-            <Bar dataKey="amountDollars" name="Paid revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={36} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(15, 76, 129, 0.08)" }} />
+            <Bar dataKey="amountDollars" name="Paid revenue" fill="#0f4c81" radius={[4, 4, 0, 0]} maxBarSize={36} />
           </BarChart>
         </ResponsiveContainer>
       </div>
