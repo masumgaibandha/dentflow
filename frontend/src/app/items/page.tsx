@@ -77,8 +77,15 @@ function ItemsExploreContent() {
         </p>
 
         {clinicSlug && (
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <TreatmentFilters value={filters} onChange={handleFiltersChange} />
+            <button
+              type="button"
+              onClick={() => handleFiltersChange(DEFAULT_FILTERS)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              Clear filters
+            </button>
           </div>
         )}
 

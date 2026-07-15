@@ -19,6 +19,7 @@ function toTreatmentDto(treatment: TreatmentDocument) {
     price: treatment.price,
     durationMinutes: treatment.durationMinutes,
     category: treatment.category,
+    isActive: treatment.isActive,
     createdAt: treatment.createdAt,
     updatedAt: treatment.updatedAt,
   };

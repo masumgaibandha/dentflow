@@ -59,7 +59,13 @@ describe("PortalShell mobile navigation", () => {
       </PortalShell>,
     );
     const menu = openMenu();
-    for (const label of ["Dashboard", "Appointments", "Invoices", "Medical records"]) {
+    for (const label of [
+      "Dashboard",
+      "Appointments",
+      "Invoices",
+      "Medical records",
+      "Browse Services",
+    ]) {
       expect(within(menu).getByText(label)).toBeInTheDocument();
     }
   });
@@ -74,6 +80,19 @@ describe("PortalShell mobile navigation", () => {
     for (const label of ["Patients", "Dentists", "Services", "Settings", "Staff"]) {
       expect(within(menu).queryByText(label)).not.toBeInTheDocument();
     }
+  });
+
+  it("gives a patient at least 5 nav routes", () => {
+    render(
+      <PortalShell>
+        <div />
+      </PortalShell>,
+    );
+    const menu = openMenu();
+    const linkLabels = within(menu)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(linkLabels.length).toBeGreaterThanOrEqual(5);
   });
 
   it("closes the menu when a link is selected", () => {

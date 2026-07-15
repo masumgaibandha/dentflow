@@ -88,7 +88,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           { href: "/settings", label: "Settings" },
           { href: "/settings/users", label: "Staff" },
         ]
-      : []),
+      : [
+          // Public pages, not new backend permissions - PublicTopBar already
+          // recognizes a logged-in staff user and shows their app link + Log
+          // out instead of Login/Register, so this is a safe, dead-end-free
+          // way to give staff a 5th and 6th nav route without touching
+          // requireRole/authorization anywhere.
+          { href: "/about", label: "About" },
+          { href: "/contact", label: "Help" },
+        ]),
   ];
 
   function handleLogout() {

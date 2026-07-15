@@ -31,8 +31,12 @@ const treatments: Treatment[] = [
   },
 ];
 
+// Scoped to the desktop <table> - the mobile stacked-card layout renders the
+// same title/actions again (CSS-hidden, not removed from the DOM), so an
+// unscoped screen.getByText(title) would now match twice.
 function getRow(title: string) {
-  return screen.getByText(title).closest("tr")!;
+  const table = screen.getByRole("table");
+  return within(table).getByText(title).closest("tr")!;
 }
 
 describe("TreatmentTable actions", () => {
@@ -99,5 +103,43 @@ describe("TreatmentTable actions", () => {
     for (const button of Array.from(container.querySelectorAll("button"))) {
       expect(button.closest("a")).toBeNull();
     }
+  });
+});
+
+describe("TreatmentTable mobile stacked-card layout", () => {
+  // Both layouts render at once (CSS-hidden, not removed) - the title text
+  // appears once inside the desktop <td> and once inside the mobile card, so
+  // this picks the one that isn't inside a table cell.
+  function getCard(title: string): HTMLElement {
+    const matches = screen.getAllByText(title);
+    const cardTitle = matches.find((el) => el.closest("td") === null);
+    return cardTitle!.closest<HTMLElement>("div.rounded-lg")!;
+  }
+
+  it("renders title, category, price, status, and all three actions per card", () => {
+    render(
+      <TreatmentTable treatments={treatments} isLoading={false} onEdit={vi.fn()} onDelete={vi.fn()} />,
+    );
+    for (const treatment of treatments) {
+      const card = within(getCard(treatment.title));
+      expect(card.getByText(treatment.category)).toBeInTheDocument();
+      expect(card.getByText(`$${treatment.price.toFixed(2)}`)).toBeInTheDocument();
+      expect(card.getByText("Active")).toBeInTheDocument();
+      expect(card.getByRole("link", { name: "View" })).toBeInTheDocument();
+      expect(card.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+      expect(card.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    }
+  });
+
+  it("shows Inactive for a treatment with isActive: false", () => {
+    render(
+      <TreatmentTable
+        treatments={[{ ...treatments[0]!, isActive: false }]}
+        isLoading={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(within(getCard("Dental Crown")).getByText("Inactive")).toBeInTheDocument();
   });
 });

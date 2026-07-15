@@ -94,6 +94,23 @@ describe("DashboardShell mobile navigation", () => {
     }
   });
 
+  it("gives a staff user at least 5 nav routes, none of them admin-only", () => {
+    setUser("staff");
+    render(
+      <DashboardShell>
+        <div />
+      </DashboardShell>,
+    );
+    const menu = openMenu();
+    const linkLabels = within(menu)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(linkLabels.length).toBeGreaterThanOrEqual(5);
+    for (const label of ["Dashboard", "Invoices", "Services", "Settings", "Staff"]) {
+      expect(linkLabels).not.toContain(label);
+    }
+  });
+
   it("closes the menu when a link is selected", () => {
     setUser("admin");
     render(

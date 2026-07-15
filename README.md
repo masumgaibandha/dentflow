@@ -305,16 +305,6 @@ npm run lint
 npm run build
 ```
 
-## Screenshots
-
-_Screenshots to be added before final submission._
-
-- Landing page: _placeholder_
-- Services catalog: _placeholder_
-- Admin dashboard: _placeholder_
-- Patient portal: _placeholder_
-- Stripe test payment: _placeholder_
-
 ## Security Notes
 
 - Passwords are hashed with bcrypt (12 salt rounds) - never stored in plaintext

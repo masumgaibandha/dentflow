@@ -21,6 +21,9 @@ export interface Treatment {
   price: number;
   durationMinutes: number;
   category: TreatmentCategory;
+  // Backward-compatible, same convention as the backend's own active-record
+  // queries: absent/undefined means active, only `false` means inactive.
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
 }

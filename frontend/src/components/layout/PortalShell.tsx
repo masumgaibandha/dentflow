@@ -22,6 +22,12 @@ const PORTAL_LINKS: NavLink[] = [
   { href: "/portal/appointments", label: "Appointments" },
   { href: "/portal/invoices", label: "Invoices" },
   { href: "/portal/medical-records", label: "Medical records" },
+  // Public catalog page, not a new backend permission - PublicTopBar already
+  // recognizes a logged-in patient and shows their Portal link + Log out
+  // instead of Login/Register, so this is a safe 5th portal nav route.
+  // Labelled distinctly from the admin-only "Services" (Manage Services)
+  // link so the two are never confused with each other.
+  { href: "/items", label: "Browse Services" },
 ];
 
 // Separate from DashboardShell on purpose: patients must never see the
